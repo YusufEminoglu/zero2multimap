@@ -92,7 +92,7 @@ class PrintLayoutDialog(QDialog):
 
         # 5. Export Format
         self.format_combo = QComboBox()
-        self.format_combo.addItems(["PNG Image (*.png)", "JPEG Image (*.jpg)", "PDF Document (*.pdf)", "SVG Graphic (*.svg)"])
+        self.format_combo.addItems(["PNG Image (*.png)", "JPEG Image (*.jpg)", "PDF Document (*.pdf)", "SVG Graphic (*.svg)", "Interactive HTML (*.html)"])
         form.addRow("Export Format:", self.format_combo)
 
         # 6. Export File Path
@@ -141,6 +141,8 @@ class PrintLayoutDialog(QDialog):
             ext = ".jpg"
         elif "PDF" in format_filter:
             ext = ".pdf"
+        elif "HTML" in format_filter:
+            ext = ".html"
         else:
             ext = ".svg"
 
@@ -163,6 +165,16 @@ class PrintLayoutDialog(QDialog):
 
         if not export_path:
             QMessageBox.warning(self, "Export Path", "Please select an export file path.")
+            return
+
+        # Handle Interactive HTML format directly
+        if export_path.lower().endswith(".html"):
+            try:
+                self.export_to_html(export_path, title)
+            except Exception as e:
+                QMessageBox.critical(
+                    self, "Export Error", f"An unexpected error occurred during HTML export:\n{str(e)}"
+                )
             return
 
         # Page Dimensions in mm
@@ -296,3 +308,286 @@ class PrintLayoutDialog(QDialog):
             QMessageBox.critical(
                 self, "Export Error", f"An unexpected error occurred during export:\n{str(e)}"
             )
+
+    def export_to_html(self, export_path: str, title: str) -> None:
+        """Generates a responsive, synchronized Leaflet HTML map grid with vector GeoJSON layers."""
+        import json
+        from qgis.core import QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsJsonExporter, QgsMapLayer
+        
+        cols = self.parent_dialog.cols
+        rows = self.parent_dialog.rows
+        panels = self.parent_dialog.panels
+        
+        grid_template_columns = " ".join(["1fr"] * cols)
+        grid_template_rows = " ".join(["1fr"] * rows)
+        
+        project = QgsProject.instance()
+        crs_4326 = QgsCoordinateReferenceSystem("EPSG:4326")
+        
+        active = getattr(self.parent_dialog, "active_panel", None)
+        if not active and panels:
+            active = panels[0]
+            
+        if active:
+            try:
+                transform = QgsCoordinateTransform(
+                    active.canvas.mapSettings().destinationCrs(),
+                    crs_4326,
+                    project
+                )
+                center_wgs = transform.transform(active.canvas.center())
+                center_lat, center_lng = center_wgs.y(), center_wgs.x()
+                
+                scale = active.canvas.scale()
+                import math
+                zoom = int(round(math.log2(559000000.0 / scale)))
+                zoom = max(0, min(18, zoom))
+            except Exception:
+                center_lat, center_lng, zoom = 39.9, 32.8, 6
+        else:
+            center_lat, center_lng, zoom = 39.9, 32.8, 6
+            
+        panels_data = []
+        for i, panel in enumerate(panels):
+            geojson_data = None
+            mode = panel.mode
+            panel_title = f"Panel {i + 1}"
+            
+            try:
+                if mode == "layer":
+                    selected_layer_name = panel.layer_combo.currentText()
+                    panel_title = f"Focus: {selected_layer_name}"
+                    layers = project.mapLayersByName(selected_layer_name)
+                    if layers and layers[0].type() == QgsMapLayer.VectorLayer:
+                        vlayer = layers[0]
+                        exporter = QgsJsonExporter(vlayer)
+                        exporter.setSourceCrs(vlayer.crs())
+                        exporter.setTargetCrs(crs_4326)
+                        features = list(vlayer.getFeatures())[:3000]
+                        geojson_str = exporter.exportFeatures(features)
+                        geojson_data = json.loads(geojson_str)
+                elif mode == "theme":
+                    theme_name = panel.theme_combo.currentText()
+                    panel_title = f"Theme: {theme_name}"
+                    theme_layers = project.mapThemeCollection().mapThemeVisibleLayers(theme_name)
+                    vector_layers = [lyr for lyr in theme_layers if lyr.type() == QgsMapLayer.VectorLayer]
+                    if vector_layers:
+                        vlayer = vector_layers[0]
+                        exporter = QgsJsonExporter(vlayer)
+                        exporter.setSourceCrs(vlayer.crs())
+                        exporter.setTargetCrs(crs_4326)
+                        features = list(vlayer.getFeatures())[:3000]
+                        geojson_str = exporter.exportFeatures(features)
+                        geojson_data = json.loads(geojson_str)
+                else:  # sync mode (canvas)
+                    panel_title = "Sync: Main Map"
+                    canvas_layers = self.parent_dialog.iface.mapCanvas().layers()
+                    vector_layers = [lyr for lyr in canvas_layers if lyr.type() == QgsMapLayer.VectorLayer]
+                    if vector_layers:
+                        vlayer = vector_layers[0]
+                        exporter = QgsJsonExporter(vlayer)
+                        exporter.setSourceCrs(vlayer.crs())
+                        exporter.setTargetCrs(crs_4326)
+                        features = list(vlayer.getFeatures())[:3000]
+                        geojson_str = exporter.exportFeatures(features)
+                        geojson_data = json.loads(geojson_str)
+            except Exception as exc:
+                print(f"Error exporting GeoJSON for panel {i + 1}: {exc}")
+                
+            panels_data.append({
+                "id": f"map-panel-{i}",
+                "title": panel_title,
+                "geojson": geojson_data
+            })
+            
+        html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    
+    <style>
+        * {{
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }}
+        body {{
+            font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            background-color: #fbfbfd;
+            color: #2c3e46;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }}
+        header {{
+            background-color: #ffffff;
+            border-bottom: 1px solid #cbd3da;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }}
+        h1 {{
+            font-size: 18px;
+            font-weight: 700;
+            color: #16323f;
+        }}
+        .brand {{
+            font-size: 12px;
+            color: #2a8f85;
+            font-weight: 600;
+            background: #eef1f4;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }}
+        .grid-container {{
+            flex: 1;
+            display: grid;
+            grid-template-columns: {grid_template_columns};
+            grid-template-rows: {grid_template_rows};
+            gap: 4px;
+            padding: 4px;
+            background-color: #cbd3da;
+        }}
+        .panel {{
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            border-radius: 4px;
+            overflow: hidden;
+        }}
+        .panel-header {{
+            background-color: #eef1f4;
+            border-bottom: 1px solid #cbd3da;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #16323f;
+        }}
+        .map-view {{
+            flex: 1;
+            background-color: #f0f2f5;
+        }}
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>{title}</h1>
+        <div class="brand">02-Multimap Interactive Dashboard</div>
+    </header>
+
+    <div class="grid-container">
+"""
+        for p in panels_data:
+            html_content += f"""
+        <div class="panel">
+            <div class="panel-header">{p['title']}</div>
+            <div id="{p['id']}" class="map-view"></div>
+        </div>"""
+            
+        html_content += f"""
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <script>
+        const initialCenter = [{center_lat}, {center_lng}];
+        const initialZoom = {zoom};
+        const panelsData = {json.dumps(panels_data)};
+        const maps = [];
+        const cursors = [];
+        
+        let isSyncing = false;
+
+        panelsData.forEach((pane, idx) => {{
+            const map = L.map(pane.id, {{
+                zoomControl: idx === 0,
+                attributionControl: false
+            }}).setView(initialCenter, initialZoom);
+            
+            L.tileLayer('https://{{s}}.basemaps.cartocdn.com/light_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
+                maxZoom: 20
+            }}).addTo(map);
+            
+            if (pane.geojson) {{
+                const geoJsonLayer = L.geoJSON(pane.geojson, {{
+                    style: {{
+                        color: '#2a8f85',
+                        weight: 2,
+                        fillColor: '#2a8f85',
+                        fillOpacity: 0.15
+                    }}
+                }}).addTo(map);
+                
+                try {{
+                    const bounds = geoJsonLayer.getBounds();
+                    if (bounds.isValid()) {{
+                        map.fitBounds(bounds);
+                    }}
+                }} catch(e) {{}}
+            }}
+            
+            maps.push(map);
+
+            const cursorMarker = L.circleMarker([0, 0], {{
+                radius: 6,
+                color: '#e74c3c',
+                fillColor: '#e74c3c',
+                fillOpacity: 0.8,
+                weight: 1,
+                interactive: false
+            }}).addTo(map);
+            cursorMarker.setStyle({{ opacity: 0, fillOpacity: 0 }});
+            cursors.push(cursorMarker);
+        }});
+
+        maps.forEach((map, idx) => {{
+            map.on('move', () => {{
+                if (isSyncing) return;
+                isSyncing = true;
+                
+                const center = map.getCenter();
+                const zoom = map.getZoom();
+                
+                maps.forEach((otherMap, otherIdx) => {{
+                    if (otherIdx !== idx) {{
+                        otherMap.setView(center, zoom, {{ animate: false }});
+                    }}
+                }});
+                
+                isSyncing = false;
+            }});
+            
+            map.on('mousemove', (e) => {{
+                const latlng = e.latlng;
+                cursors.forEach((c) => {{
+                    c.setLatLng(latlng);
+                    c.setStyle({{ opacity: 0.8, fillOpacity: 0.8 }});
+                }});
+            }});
+            
+            map.on('mouseout', () => {{
+                cursors.forEach((c) => {{
+                    c.setStyle({{ opacity: 0, fillOpacity: 0 }});
+                }});
+            }});
+        }});
+    </script>
+</body>
+</html>
+"""
+        with open(export_path, "w", encoding="utf-8") as f:
+            f.write(html_content)
+        
+        QMessageBox.information(
+            self, "Export Success", f"Interactive HTML dashboard exported successfully to:\n{export_path}"
+        )
+        self.accept()
