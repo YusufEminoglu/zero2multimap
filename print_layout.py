@@ -362,7 +362,7 @@ class PrintLayoutDialog(QDialog):
                         vlayer = layers[0]
                         exporter = QgsJsonExporter(vlayer)
                         exporter.setSourceCrs(vlayer.crs())
-                        exporter.setTargetCrs(crs_4326)
+                        exporter.setDestinationCrs(crs_4326)
                         features = list(vlayer.getFeatures())[:3000]
                         geojson_str = exporter.exportFeatures(features)
                         geojson_data = json.loads(geojson_str)
@@ -375,7 +375,7 @@ class PrintLayoutDialog(QDialog):
                         vlayer = vector_layers[0]
                         exporter = QgsJsonExporter(vlayer)
                         exporter.setSourceCrs(vlayer.crs())
-                        exporter.setTargetCrs(crs_4326)
+                        exporter.setDestinationCrs(crs_4326)
                         features = list(vlayer.getFeatures())[:3000]
                         geojson_str = exporter.exportFeatures(features)
                         geojson_data = json.loads(geojson_str)
@@ -387,7 +387,7 @@ class PrintLayoutDialog(QDialog):
                         vlayer = vector_layers[0]
                         exporter = QgsJsonExporter(vlayer)
                         exporter.setSourceCrs(vlayer.crs())
-                        exporter.setTargetCrs(crs_4326)
+                        exporter.setDestinationCrs(crs_4326)
                         features = list(vlayer.getFeatures())[:3000]
                         geojson_str = exporter.exportFeatures(features)
                         geojson_data = json.loads(geojson_str)
