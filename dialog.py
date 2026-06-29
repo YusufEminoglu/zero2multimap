@@ -6,9 +6,8 @@ and cursor tracking mechanisms. It is designed to run in QGIS 4 (PyQt6).
 """
 from __future__ import annotations
 
-import os
 from qgis.PyQt.QtCore import Qt, QObject, QEvent, QPoint, pyqtSignal
-from qgis.PyQt.QtGui import QColor, QMouseEvent
+from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtWidgets import (
     QDialog,
     QComboBox,
@@ -20,10 +19,9 @@ from qgis.PyQt.QtWidgets import (
     QPushButton,
     QFrame,
     QWidget,
-    QMessageBox,
     QSplitter,
 )
-from qgis.core import QgsProject, QgsMapLayer, QgsPointXY, QgsCoordinateReferenceSystem
+from qgis.core import QgsProject, QgsMapLayer
 from qgis.gui import QgsMapCanvas, QgsVertexMarker, QgsMapToolPan
 from .print_layout import PrintLayoutDialog
 
@@ -62,7 +60,7 @@ class CanvasEventFilter(QObject):
         self.panel = panel
         self.on_mouse_move = on_mouse_move
         self.on_leave = on_leave
-        
+
         viewport = panel.canvas.viewport()
         viewport.installEventFilter(self)
         viewport.setMouseTracking(True)
@@ -104,7 +102,7 @@ class MapPanelWidget(QFrame):
     def _setup_ui(self) -> None:
         self.setObjectName("MapPanel")
         setup_frame_style(self, "StyledPanel", "Raised")
-        
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(1, 1, 1, 1)
         layout.setSpacing(0)
@@ -181,7 +179,7 @@ class MapPanelWidget(QFrame):
     def update_canvas_layers(self) -> None:
         """Applies layers to the map canvas based on selected mode."""
         project = QgsProject.instance()
-        
+
         if self.mode == "sync":
             self.canvas.setLayers(self.iface.mapCanvas().layers())
         elif self.mode == "layer":
@@ -190,7 +188,7 @@ class MapPanelWidget(QFrame):
             canvas_layers = []
             if layers:
                 canvas_layers.append(layers[0])
-            
+
             # Fetch global base layer if selected in main window
             window = self.window()
             if isinstance(window, MultiMapDialog):
@@ -202,7 +200,7 @@ class MapPanelWidget(QFrame):
             theme_name = self.theme_combo.currentText()
             theme_layers = project.mapThemeCollection().mapThemeVisibleLayers(theme_name)
             self.canvas.setLayers(theme_layers)
-        
+
         self.canvas.refresh()
 
 
@@ -217,7 +215,7 @@ class MultiMapDialog(QDialog):
         self.rows = 2
         self.cols = 2
         self._is_syncing = False
-        
+
         # Cursor tracking markers
         self.main_canvas_marker: QgsVertexMarker | None = None
 
@@ -232,7 +230,7 @@ class MultiMapDialog(QDialog):
         project.layerWasAdded.connect(self.populate_layer_combos)
         project.layerRemoved.connect(self.populate_layer_combos)
         project.mapThemeCollection().mapThemesChanged.connect(self.populate_theme_combos)
-        
+
         # Sync main canvas changes to sync-mode panels
         self.iface.mapCanvas().layersChanged.connect(self.sync_all_panel_layers)
         self.iface.mapCanvas().extentsChanged.connect(self.on_main_canvas_extent_changed)
@@ -335,17 +333,17 @@ class MultiMapDialog(QDialog):
         self.status_frame.setObjectName("StatusFrame")
         status_layout = QHBoxLayout(self.status_frame)
         status_layout.setContentsMargins(6, 4, 6, 4)
-        
+
         self.status_label = QLabel("Ready")
         self.status_label.setObjectName("StatusLabel")
         status_layout.addWidget(self.status_label)
-        
+
         status_layout.addStretch(1)
-        
+
         self.coords_label = QLabel("Cursor Coord: -")
         self.coords_label.setObjectName("CoordsLabel")
         status_layout.addWidget(self.coords_label)
-        
+
         root_layout.addWidget(self.status_frame)
 
     def _apply_qss(self) -> None:
@@ -467,7 +465,7 @@ class MultiMapDialog(QDialog):
     def set_grid_layout(self, layout_name: str) -> None:
         """Destroys current grid canvas widgets and recreates layout with specified size."""
         self._is_syncing = True
-        
+
         # Clean up existing panel filters, markers, and canvases
         for ef in self.event_filters:
             ef.deleteLater()
@@ -511,14 +509,14 @@ class MultiMapDialog(QDialog):
             panel = MapPanelWidget(i, self.iface, self)
             panel.canvas.setDestinationCrs(main_crs)
             panel.canvas.setExtent(main_extent)
-            
+
             # Listen to panel's extent changes
             panel.canvas.extentsChanged.connect(
                 lambda p=panel: self.on_panel_extent_changed(p)
             )
             # Listen to active panel shifts
             panel.active_changed.connect(self.set_active_panel)
-            
+
             # Install mouse event tracking
             ef = CanvasEventFilter(panel, self.on_mouse_moved_in_panel, self.on_mouse_left_panel)
             self.event_filters.append(ef)
@@ -530,7 +528,7 @@ class MultiMapDialog(QDialog):
             h_splitter = QSplitter(get_orientation("Horizontal"))
             for panel in self.panels:
                 h_splitter.addWidget(panel)
-            
+
             # Equal spacing
             sizes = [self.width() // cols] * cols
             h_splitter.setSizes(sizes)
@@ -538,30 +536,30 @@ class MultiMapDialog(QDialog):
         else:
             # Multi-row stacking (e.g. 2x1, 2x2, 2x3, 2x4)
             v_splitter = QSplitter(get_orientation("Vertical"))
-            
+
             # Split panels into Row 1 and Row 2
             row1_splitter = QSplitter(get_orientation("Horizontal"))
             for idx in range(cols):
                 row1_splitter.addWidget(self.panels[idx])
             v_splitter.addWidget(row1_splitter)
-            
+
             row2_splitter = QSplitter(get_orientation("Horizontal"))
             for idx in range(cols, count):
                 row2_splitter.addWidget(self.panels[idx])
             v_splitter.addWidget(row2_splitter)
-            
+
             # Set initial equal sizes
             h_sizes = [self.width() // cols] * cols
             row1_splitter.setSizes(h_sizes)
             row2_splitter.setSizes(h_sizes)
             v_splitter.setSizes([self.height() // 2, self.height() // 2])
-            
+
             self.grid_layout.addWidget(v_splitter, 0, 0)
 
         self.populate_layer_combos()
         self.populate_theme_combos()
         self.sync_all_panel_layers()
-        
+
         self.set_active_panel(self.panels[0])
         self._is_syncing = False
         self.refresh_all_canvases()
@@ -651,11 +649,11 @@ class MultiMapDialog(QDialog):
         """Synchronizes other panels when one is panned or zoomed."""
         if self._is_syncing or not self.sync_extents_chk.isChecked():
             return
-        
+
         self._is_syncing = True
         try:
             extent = trigger_panel.canvas.extent()
-            
+
             # Sync to all other panels
             for panel in self.panels:
                 if panel == trigger_panel:
@@ -679,7 +677,7 @@ class MultiMapDialog(QDialog):
         """Syncs all panels when the main QGIS map canvas extent changes."""
         if self._is_syncing or not self.sync_main_chk.isChecked() or not self.sync_extents_chk.isChecked():
             return
-        
+
         self._is_syncing = True
         try:
             extent = self.iface.mapCanvas().extent()
@@ -757,10 +755,10 @@ class MultiMapDialog(QDialog):
         """Triggered when mouse moves over a panel map canvas viewport."""
         if not self.laser_chk.isChecked():
             return
-        
+
         # Convert local pixel coordinate to Map Coordinates (QgsPointXY)
         map_point = source_panel.canvas.mapSettings().mapToPixel().toMapCoordinates(pos.x(), pos.y())
-        
+
         self.coords_label.setText(f"X: {map_point.x():.2f}, Y: {map_point.y():.2f}")
 
         # Update markers on all other panel canvases
@@ -768,7 +766,7 @@ class MultiMapDialog(QDialog):
             if panel == source_panel:
                 panel.marker.hide()
                 continue
-            
+
             panel.marker.setCenter(map_point)
             panel.marker.show()
 

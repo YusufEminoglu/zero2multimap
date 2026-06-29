@@ -29,18 +29,18 @@ class O2MultiMapPlugin:
 
     def initGui(self) -> None:
         self.action = QAction(
-            QIcon(self.icon_path), 
-            "02-Multimap Workspace", 
+            QIcon(self.icon_path),
+            "02-Multimap Workspace",
             self.iface.mainWindow()
         )
         self.action.setStatusTip("Open multi-panel synchronized map viewer workspace.")
         self.action.triggered.connect(self.show_dialog)
-        
+
         # Add a custom top-level menu
         self.menu = QMenu(self.MENU_NAME, self.iface.mainWindow().menuBar())
         self.iface.mainWindow().menuBar().addMenu(self.menu)
         self.menu.addAction(self.action)
-        
+
         # Add to standard toolbar
         self.iface.addToolBarIcon(self.action)
 
@@ -62,7 +62,7 @@ class O2MultiMapPlugin:
             from .dialog import MultiMapDialog
 
             self.dialog = MultiMapDialog(self.iface, self.iface.mainWindow())
-            
+
         self.dialog.show()
         self.dialog.raise_()
         self.dialog.activateWindow()

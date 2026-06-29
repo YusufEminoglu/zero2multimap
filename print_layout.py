@@ -7,13 +7,12 @@ orientation, scalebar style, north arrow graphic, and export to PNG, JPEG, SVG, 
 from __future__ import annotations
 
 import os
-from qgis.PyQt.QtCore import Qt, QPoint, QSize
-from qgis.PyQt.QtGui import QColor, QFont
+from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtGui import QFont
 from qgis.PyQt.QtWidgets import (
     QDialog,
     QVBoxLayout,
     QHBoxLayout,
-    QLabel,
     QLineEdit,
     QComboBox,
     QPushButton,
@@ -110,10 +109,10 @@ class PrintLayoutDialog(QDialog):
         # Action Buttons
         btn_layout = QHBoxLayout()
         btn_layout.addStretch(1)
-        
+
         self.cancel_btn = QPushButton("Cancel")
         self.cancel_btn.clicked.connect(self.reject)
-        
+
         self.export_btn = QPushButton("Export")
         self.export_btn.clicked.connect(self.execute_export)
         # Apply accent highlight
@@ -127,7 +126,7 @@ class PrintLayoutDialog(QDialog):
                 background-color: #319c91;
             }
         """)
-        
+
         btn_layout.addWidget(self.cancel_btn)
         btn_layout.addWidget(self.export_btn)
         layout.addLayout(btn_layout)
@@ -198,7 +197,7 @@ class PrintLayoutDialog(QDialog):
         title_item = QgsLayoutItemLabel(layout)
         title_item.setText(title)
         title_item.setFont(QFont("Segoe UI", 16, QFont.Weight.Bold))
-        
+
         # Dynamic Alignment compatibility
         align_center = getattr(Qt.AlignmentFlag, "AlignCenter", getattr(Qt, "AlignCenter"))
         title_item.setHAlign(align_center)
@@ -313,21 +312,21 @@ class PrintLayoutDialog(QDialog):
         """Generates a responsive, synchronized Leaflet HTML map grid with vector GeoJSON layers."""
         import json
         from qgis.core import QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsJsonExporter, QgsMapLayer
-        
+
         cols = self.parent_dialog.cols
         rows = self.parent_dialog.rows
         panels = self.parent_dialog.panels
-        
+
         grid_template_columns = " ".join(["1fr"] * cols)
         grid_template_rows = " ".join(["1fr"] * rows)
-        
+
         project = QgsProject.instance()
         crs_4326 = QgsCoordinateReferenceSystem("EPSG:4326")
-        
+
         active = getattr(self.parent_dialog, "active_panel", None)
         if not active and panels:
             active = panels[0]
-            
+
         if active:
             try:
                 transform = QgsCoordinateTransform(
@@ -337,7 +336,7 @@ class PrintLayoutDialog(QDialog):
                 )
                 center_wgs = transform.transform(active.canvas.center())
                 center_lat, center_lng = center_wgs.y(), center_wgs.x()
-                
+
                 scale = active.canvas.scale()
                 import math
                 zoom = int(round(math.log2(559000000.0 / scale)))
@@ -346,13 +345,13 @@ class PrintLayoutDialog(QDialog):
                 center_lat, center_lng, zoom = 39.9, 32.8, 6
         else:
             center_lat, center_lng, zoom = 39.9, 32.8, 6
-            
+
         panels_data = []
         for i, panel in enumerate(panels):
             geojson_data = None
             mode = panel.mode
             panel_title = f"Panel {i + 1}"
-            
+
             try:
                 if mode == "layer":
                     selected_layer_name = panel.layer_combo.currentText()
@@ -393,23 +392,23 @@ class PrintLayoutDialog(QDialog):
                         geojson_data = json.loads(geojson_str)
             except Exception as exc:
                 print(f"Error exporting GeoJSON for panel {i + 1}: {exc}")
-                
+
             panels_data.append({
                 "id": f"map-panel-{i}",
                 "title": panel_title,
                 "geojson": geojson_data
             })
-            
+
         html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
-    
+
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    
+
     <style>
         * {{
             box-sizing: border-box;
@@ -491,20 +490,20 @@ class PrintLayoutDialog(QDialog):
             <div class="panel-header">{p['title']}</div>
             <div id="{p['id']}" class="map-view"></div>
         </div>"""
-            
+
         html_content += f"""
     </div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    
+
     <script>
         const initialCenter = [{center_lat}, {center_lng}];
         const initialZoom = {zoom};
         const panelsData = {json.dumps(panels_data)};
         const maps = [];
         const cursors = [];
-        
+
         let isSyncing = false;
 
         panelsData.forEach((pane, idx) => {{
@@ -512,11 +511,11 @@ class PrintLayoutDialog(QDialog):
                 zoomControl: idx === 0,
                 attributionControl: false
             }}).setView(initialCenter, initialZoom);
-            
+
             L.tileLayer('https://{{s}}.basemaps.cartocdn.com/light_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
                 maxZoom: 20
             }}).addTo(map);
-            
+
             if (pane.geojson) {{
                 const geoJsonLayer = L.geoJSON(pane.geojson, {{
                     style: {{
@@ -526,7 +525,7 @@ class PrintLayoutDialog(QDialog):
                         fillOpacity: 0.15
                     }}
                 }}).addTo(map);
-                
+
                 try {{
                     const bounds = geoJsonLayer.getBounds();
                     if (bounds.isValid()) {{
@@ -534,7 +533,7 @@ class PrintLayoutDialog(QDialog):
                     }}
                 }} catch(e) {{}}
             }}
-            
+
             maps.push(map);
 
             const cursorMarker = L.circleMarker([0, 0], {{
@@ -553,19 +552,19 @@ class PrintLayoutDialog(QDialog):
             map.on('move', () => {{
                 if (isSyncing) return;
                 isSyncing = true;
-                
+
                 const center = map.getCenter();
                 const zoom = map.getZoom();
-                
+
                 maps.forEach((otherMap, otherIdx) => {{
                     if (otherIdx !== idx) {{
                         otherMap.setView(center, zoom, {{ animate: false }});
                     }}
                 }});
-                
+
                 isSyncing = false;
             }});
-            
+
             map.on('mousemove', (e) => {{
                 const latlng = e.latlng;
                 cursors.forEach((c) => {{
@@ -573,7 +572,7 @@ class PrintLayoutDialog(QDialog):
                     c.setStyle({{ opacity: 0.8, fillOpacity: 0.8 }});
                 }});
             }});
-            
+
             map.on('mouseout', () => {{
                 cursors.forEach((c) => {{
                     c.setStyle({{ opacity: 0, fillOpacity: 0 }});
@@ -586,7 +585,7 @@ class PrintLayoutDialog(QDialog):
 """
         with open(export_path, "w", encoding="utf-8") as f:
             f.write(html_content)
-        
+
         QMessageBox.information(
             self, "Export Success", f"Interactive HTML dashboard exported successfully to:\n{export_path}"
         )
