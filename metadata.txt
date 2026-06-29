@@ -2,12 +2,22 @@
 name=02-Multimap: Sync-up Multimaps
 qgisMinimumVersion=3.40
 qgisMaximumVersion=4.99
-description=Multi-panel synchronized map canvases with laser pointer cursor tracking (QGIS 3.40+ and QGIS 4).
+description=Multi-panel synchronized map canvases with laser pointer cursor tracking and layout exports.
 version=0.1.3
 author=Yusuf Eminoglu
 email=yusuf.eminoglu@deu.edu.tr
 
-about=02-Multimap enables side-by-side comparative visualization using multiple synchronized map views (2, 4, 6, or 8 panels) with automatic extent syncing and coordinated crosshair pointer tracking. Developed with feedback from educational workflows at Dokuz Eylul University, Department of City and Regional Planning.
+about=02-Multimap is an advanced, high-performance workspace plugin designed for comparative spatial analysis and multi-scenario map visualization. Ideal for urban planners, environmental researchers, and demographers, it allows you to compare multiple spatial patterns side-by-side in a coordinated layout.
+    
+    Key Capabilities:
+    1. Synchronized Viewport Grids: Rebuild your workspace into 2, 3, 4, 6, or 8 synchronized map canvases (in horizontal, vertical, or grid matrices).
+    2. Dynamic Spacing Splitters: Interactively drag and resize panel borders using smooth split sliders to focus on specific viewports.
+    3. Bi-directional Syncing: Automatically coordinate map navigation, zoom, and panning across all panels, optionally synced with the main QGIS canvas.
+    4. Synchronized Laser Cursor: Track coordinates across all canvases simultaneously with custom colored crosshairs following your mouse movement.
+    5. Flexible Rendering Modes: Let each canvas display your active map, track dedicated project Map Themes, or isolate unique vector Focus Layers on top of a global base layer.
+    6. Manual Scale Alignments: Match map scales or spatial extents with single-click buttons when automated syncing is disabled.
+    7. Professional Print layouts: Add titles, 5 Scalebar options, and 5 North Arrow graphics, exporting the grid matrix directly to PDF, SVG, PNG, or JPEG.
+    8. Interactive HTML Dashboards: Export the comparative layout as a self-contained Leaflet.js web page complete with reprojected vector layer features, basemaps, and synchronized laser tracking.
 
 tracker=https://github.com/YusufEminoglu/zero2multimap/issues
 repository=https://github.com/YusufEminoglu/zero2multimap
