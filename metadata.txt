@@ -1,0 +1,26 @@
+[general]
+name=PlanX MultiMap
+qgisMinimumVersion=4.0
+qgisMaximumVersion=4.99
+description=Multi-panel synchronized map canvases with laser pointer cursor tracking for QGIS 4.
+version=0.1.0
+author=Yusuf Eminoglu
+email=yusuf.eminoglu@deu.edu.tr
+
+about=PlanX MultiMap enables side-by-side comparative visualization using multiple synchronized map views (2, 4, 6, or 8 panels) with automatic extent syncing and coordinated crosshair pointer tracking. Developed with feedback from educational workflows at Dokuz Eylul University, Department of City and Regional Planning.
+
+tracker=https://github.com/YusufEminoglu/planx_multimap/issues
+repository=https://github.com/YusufEminoglu/planx_multimap
+homepage=https://github.com/YusufEminoglu/planx_multimap
+
+category=Vector
+tags=planx,qgis,dialog,multi-map,comparison,sync,demographics
+icon=icons/icon.png
+
+experimental=False
+deprecated=False
+hasProcessingProvider=no
+license=GPL-3
+
+changelog=
+    PlanX MultiMap 0.1.0 - Initial release.
