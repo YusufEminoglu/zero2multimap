@@ -234,7 +234,9 @@ class PrintLayoutDialog(QDialog):
                 map_item.setFollowVisibilityPresetName(panel.theme_combo.currentText())
             elif panel.mode == "layer":
                 layers_to_render = []
-                focus_lyr = panel.get_focus_layer()
+                selected_layer_name = panel.layer_combo.currentText()
+                layers = QgsProject.instance().mapLayersByName(selected_layer_name)
+                focus_lyr = layers[0] if layers else None
                 if focus_lyr:
                     layers_to_render.append(focus_lyr)
                 base_lyr = self.parent_dialog.get_global_base_layer()
