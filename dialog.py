@@ -20,6 +20,7 @@ from qgis.PyQt.QtWidgets import (
     QFrame,
     QWidget,
     QSplitter,
+    QTextBrowser,
 )
 from qgis.core import QgsProject, QgsMapLayer
 from qgis.gui import QgsMapCanvas, QgsVertexMarker, QgsMapToolPan
@@ -316,6 +317,12 @@ class MultiMapDialog(QDialog):
             }
         """)
         toolbar_layout.addWidget(self.print_btn)
+
+        # Quick Guide button
+        self.guide_btn = QPushButton("Quick Guide")
+        self.guide_btn.clicked.connect(self.show_quick_guide)
+        self.guide_btn.setToolTip("Show quick help guide on how to use the comparative maps workspace.")
+        toolbar_layout.addWidget(self.guide_btn)
 
         root_layout.addWidget(self.toolbar_frame)
 
@@ -805,3 +812,100 @@ class MultiMapDialog(QDialog):
             self.iface.mapCanvas().scene().removeItem(self.main_canvas_marker)
             self.main_canvas_marker = None
         super().closeEvent(event)
+
+    def show_quick_guide(self) -> None:
+        """Opens a stylish help guide dialog explaining plugin usage."""
+        dialog = QuickGuideDialog(self)
+        dialog.exec()
+
+
+class QuickGuideDialog(QDialog):
+    """A stylish dialog displaying the quick help guide for 02-Multimap."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("02-Multimap Workspace Guide")
+        self.resize(580, 500)
+
+        # Apply the Slate-Teal design system styling to the Help dialog
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #fbfbfd;
+            }
+            QTextBrowser {
+                background-color: #ffffff;
+                border: 1px solid #cbd3da;
+                border-radius: 6px;
+                padding: 12px;
+                color: #2c3e46;
+                font-size: 13px;
+                line-height: 1.4;
+            }
+            QPushButton {
+                background-color: #2a8f85;
+                color: #ffffff;
+                border: 1px solid #237a72;
+                border-radius: 4px;
+                padding: 6px 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #319c91;
+            }
+        """)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(12)
+
+        # Help content browser
+        self.browser = QTextBrowser()
+        self.browser.setOpenExternalLinks(True)
+
+        html_help = """
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            <h2 style="color: #16323f; font-weight: 700; border-bottom: 2px solid #2a8f85; padding-bottom: 6px; margin-top: 0;">
+                02-Multimap Workspace Guide
+            </h2>
+            <p>Welcome to <b>02-Multimap</b>, a multi-panel synchronized comparison studio.
+            This workspace enables side-by-side analysis with coordinate tracking and printing layouts.</p>
+
+            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">1. Workspace Panel Layouts</h3>
+            <p>Use the <b>Layout</b> dropdown to choose your grid format. You can snap 2, 3, 4, 6, or 8 map viewports side-by-side.
+            You can interactively drag and resize panel borders using standard split dividers (splitters).</p>
+
+            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">2. Synchronizing Map Navigation</h3>
+            <ul>
+                <li><b>Sync Extents:</b> Zooming or panning in any map viewport will automatically update the center and zoom scale of all other viewports.</li>
+                <li><b>Sync with QGIS Canvas:</b> Navigation updates are also bi-directionally linked to QGIS's main map window.</li>
+                <li><b>Manual Alignment:</b> When sync is off, click <b>Match Scale</b> to match zoom levels or <b>Match Extent</b> to copy both scale and center coordinates.</li>
+            </ul>
+
+            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">3. Coordinated Laser Cursor</h3>
+            <p>Move your mouse over any map panel. A red tracking circle (laser pointer) will reflect the exact coordinate across all other active viewports and the main QGIS canvas, making spatial cross-examination simple.</p>
+
+            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">4. Panel Render Modes</h3>
+            <p>Configure each panel individually using the dropdown header inside the viewport card:</p>
+            <ul>
+                <li><b>Sync Main Map:</b> Automatically reflects whatever layers are visible in the main QGIS Legend Layer Tree.</li>
+                <li><b>Focus Layer:</b> Locks a single target layer on top of a globally-defined base map layer. Useful for categorical layer comparisons.</li>
+                <li><b>Map Theme:</b> Locks the canvas render settings to follow a specific QGIS Map Theme style preset.</li>
+            </ul>
+
+            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">5. Advanced Print Exporter</h3>
+            <p>Click <b>Print Layout...</b> to generate vector map layout sheets. You can define a title, select from 5 Scalebar styles, choose from 5 North Arrow graphics, and save to high-resolution PNG, JPEG, SVG, or PDF formats.</p>
+
+            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">6. Interactive HTML Dashboard</h3>
+            <p>In the print exporter, select <b>Interactive HTML (*.html)</b> format to generate a self-contained Leaflet.js dashboard web page containing your vector geometries, base tilemaps, extent synchronization, and synchronized laser tracking.</p>
+        </div>
+        """
+        self.browser.setHtml(html_help)
+        layout.addWidget(self.browser, 1)
+
+        # Bottom Close Button
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch(1)
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(self.accept)
+        btn_layout.addWidget(close_btn)
+        layout.addLayout(btn_layout)
