@@ -3,6 +3,11 @@
 All notable changes to **02-Multimap** are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · versioning: [SemVer](https://semver.org/).
 
+## [0.1.3] - 2026-06-29
+
+### Changed
+- **Elite Icon Asset**: Replaced the toolbar and plugin icon with a clean, high-contrast, minimalist vector layout, ensuring high visibility and elite look on both light and dark QGIS backgrounds.
+
 ## [0.1.2] - 2026-06-29
 
 ### Fixed
