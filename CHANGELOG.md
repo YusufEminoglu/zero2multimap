@@ -3,6 +3,12 @@
 All notable changes to **02-Multimap** are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · versioning: [SemVer](https://semver.org/).
 
+## [0.1.2] - 2026-06-29
+
+### Fixed
+- **QGIS Hub Security Scans**: Fully stripped base64 Subresource Integrity (SRI) hashes from CDN JavaScript and CSS Leaflet link elements inside the HTML export template.
+- **Code Quality**: Fixed double empty blank lines in `dialog.py` (`E303`).
+
 ## [0.1.1] - 2026-06-29
 
 ### Fixed

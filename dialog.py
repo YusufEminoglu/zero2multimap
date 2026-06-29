@@ -51,7 +51,6 @@ def get_orientation(name: str):
     return getattr(orient_cls, name)
 
 
-
 class CanvasEventFilter(QObject):
     """Filters mouse events on the canvas viewport to track coordinates for the crosshair cursor."""
 
