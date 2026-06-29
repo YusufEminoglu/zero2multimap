@@ -214,6 +214,8 @@ class MultiMapDialog(QDialog):
         self.iface = iface
         self.panels: list[MapPanelWidget] = []
         self.event_filters: list[CanvasEventFilter] = []
+        self.rows = 2
+        self.cols = 2
         self._is_syncing = False
         
         # Cursor tracking markers
@@ -499,6 +501,8 @@ class MultiMapDialog(QDialog):
         elif layout_name == "8 Panels (2x4)":
             rows, cols = 2, 4
 
+        self.rows = rows
+        self.cols = cols
         count = rows * cols
         main_extent = self.iface.mapCanvas().extent()
         main_crs = self.iface.mapCanvas().mapSettings().destinationCrs()
