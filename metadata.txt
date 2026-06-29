@@ -1,8 +1,8 @@
 [general]
 name=02-Multimap: Sync-up Multimaps
-qgisMinimumVersion=4.0
+qgisMinimumVersion=3.40
 qgisMaximumVersion=4.99
-description=Multi-panel synchronized map canvases with laser pointer cursor tracking for QGIS 4.
+description=Multi-panel synchronized map canvases with laser pointer cursor tracking (QGIS 3.40+ and QGIS 4).
 version=0.1.0
 author=Yusuf Eminoglu
 email=yusuf.eminoglu@deu.edu.tr

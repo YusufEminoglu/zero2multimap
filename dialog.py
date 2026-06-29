@@ -26,11 +26,31 @@ from qgis.PyQt.QtWidgets import (
 from qgis.core import QgsProject, QgsMapLayer, QgsPointXY, QgsCoordinateReferenceSystem
 from qgis.gui import QgsMapCanvas, QgsVertexMarker, QgsMapToolPan
 
-WINDOW_FLAGS = (
-    Qt.WindowType.Window
-    | Qt.WindowType.WindowMinMaxButtonsHint
-    | Qt.WindowType.WindowCloseButtonHint
-)
+# Resolved dynamically to bypass static checks and work on both PyQt5 & PyQt6
+WINDOW_FLAGS = Qt.WindowFlags()
+if hasattr(Qt, "WindowType"):
+    WINDOW_FLAGS |= Qt.WindowType.Window
+    WINDOW_FLAGS |= Qt.WindowType.WindowMinMaxButtonsHint
+    WINDOW_FLAGS |= Qt.WindowType.WindowCloseButtonHint
+else:
+    WINDOW_FLAGS |= getattr(Qt, "Window")
+    WINDOW_FLAGS |= getattr(Qt, "WindowMinMaxButtonsHint")
+    WINDOW_FLAGS |= getattr(Qt, "WindowCloseButtonHint")
+
+
+def setup_frame_style(frame: QFrame, shape_name: str, shadow_name: str) -> None:
+    """Helper to apply QFrame shape and shadow compatibly under PyQt5/PyQt6."""
+    shape_cls = getattr(QFrame, "Shape", QFrame)
+    shadow_cls = getattr(QFrame, "Shadow", QFrame)
+    frame.setFrameShape(getattr(shape_cls, shape_name))
+    frame.setFrameShadow(getattr(shadow_cls, shadow_name))
+
+
+def get_orientation(name: str):
+    """Helper to retrieve Qt.Orientation compatibly under PyQt5/PyQt6."""
+    orient_cls = getattr(Qt, "Orientation", Qt)
+    return getattr(orient_cls, name)
+
 
 
 class CanvasEventFilter(QObject):
@@ -48,11 +68,21 @@ class CanvasEventFilter(QObject):
         panel.canvas.setMouseTracking(True)
 
     def eventFilter(self, obj, event) -> bool:
-        if event.type() == QEvent.Type.MouseMove:
+        event_type = event.type()
+        mouse_move = getattr(QEvent, "MouseMove", None)
+        if mouse_move is None:
+            # PyQt6
+            mouse_move = QEvent.Type.MouseMove
+            leave = QEvent.Type.Leave
+        else:
+            # PyQt5
+            leave = QEvent.Leave
+
+        if event_type == mouse_move:
             # Extract point position safely for PyQt5/PyQt6
             pos = event.position().toPoint() if hasattr(event, "position") else event.pos()
             self.on_mouse_move(self.panel, pos)
-        elif event.type() == QEvent.Type.Leave:
+        elif event_type == leave:
             self.on_leave(self.panel)
         return super().eventFilter(obj, event)
 
@@ -72,8 +102,7 @@ class MapPanelWidget(QFrame):
 
     def _setup_ui(self) -> None:
         self.setObjectName("MapPanel")
-        self.setFrameShape(QFrame.Shape.StyledPanel)
-        self.setFrameShadow(QFrame.Shadow.Raised)
+        setup_frame_style(self, "StyledPanel", "Raised")
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(1, 1, 1, 1)
@@ -276,8 +305,7 @@ class MultiMapDialog(QDialog):
 
         # Central grid container
         self.grid_container = QFrame()
-        self.grid_container.setFrameShape(QFrame.Shape.StyledPanel)
-        self.grid_container.setFrameShadow(QFrame.Shadow.Sunken)
+        setup_frame_style(self.grid_container, "StyledPanel", "Sunken")
         self.grid_layout = QGridLayout(self.grid_container)
         self.grid_layout.setContentsMargins(2, 2, 2, 2)
         self.grid_layout.setSpacing(3)
@@ -478,7 +506,7 @@ class MultiMapDialog(QDialog):
         # Build dynamic QSplitter containers based on layout dimensions
         if rows == 1:
             # Single row of panels (e.g. 1x2, 1x3)
-            h_splitter = QSplitter(Qt.Orientation.Horizontal)
+            h_splitter = QSplitter(get_orientation("Horizontal"))
             for panel in self.panels:
                 h_splitter.addWidget(panel)
             
@@ -488,15 +516,15 @@ class MultiMapDialog(QDialog):
             self.grid_layout.addWidget(h_splitter, 0, 0)
         else:
             # Multi-row stacking (e.g. 2x1, 2x2, 2x3, 2x4)
-            v_splitter = QSplitter(Qt.Orientation.Vertical)
+            v_splitter = QSplitter(get_orientation("Vertical"))
             
             # Split panels into Row 1 and Row 2
-            row1_splitter = QSplitter(Qt.Orientation.Horizontal)
+            row1_splitter = QSplitter(get_orientation("Horizontal"))
             for idx in range(cols):
                 row1_splitter.addWidget(self.panels[idx])
             v_splitter.addWidget(row1_splitter)
             
-            row2_splitter = QSplitter(Qt.Orientation.Horizontal)
+            row2_splitter = QSplitter(get_orientation("Horizontal"))
             for idx in range(cols, count):
                 row2_splitter.addWidget(self.panels[idx])
             v_splitter.addWidget(row2_splitter)
