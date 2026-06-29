@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.0] - 2026-06-29
+
+- Initial release
+
 All notable changes to **02-Multimap** are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · versioning: [SemVer](https://semver.org/).
 
