@@ -21,6 +21,7 @@ from qgis.PyQt.QtWidgets import (
     QFrame,
     QWidget,
     QMessageBox,
+    QSplitter,
 )
 from qgis.core import QgsProject, QgsMapLayer, QgsPointXY, QgsCoordinateReferenceSystem
 from qgis.gui import QgsMapCanvas, QgsVertexMarker, QgsMapToolPan
@@ -394,6 +395,15 @@ class MultiMapDialog(QDialog):
                 font-weight: bold;
                 font-size: 12px;
             }
+            QSplitter::handle {
+                background-color: #cbd3da;
+            }
+            QSplitter::handle:horizontal {
+                width: 3px;
+            }
+            QSplitter::handle:vertical {
+                height: 3px;
+            }
         """)
 
     def set_grid_layout(self, layout_name: str) -> None:
@@ -452,11 +462,41 @@ class MultiMapDialog(QDialog):
             # Install mouse event tracking
             ef = CanvasEventFilter(panel, self.on_mouse_moved_in_panel, self.on_mouse_left_panel)
             self.event_filters.append(ef)
-
-            r = i // cols
-            c = i % cols
-            self.grid_layout.addWidget(panel, r, c)
             self.panels.append(panel)
+
+        # Build dynamic QSplitter containers based on layout dimensions
+        if rows == 1:
+            # Single row of panels (e.g. 1x2, 1x3)
+            h_splitter = QSplitter(Qt.Orientation.Horizontal)
+            for panel in self.panels:
+                h_splitter.addWidget(panel)
+            
+            # Equal spacing
+            sizes = [self.width() // cols] * cols
+            h_splitter.setSizes(sizes)
+            self.grid_layout.addWidget(h_splitter, 0, 0)
+        else:
+            # Multi-row stacking (e.g. 2x1, 2x2, 2x3, 2x4)
+            v_splitter = QSplitter(Qt.Orientation.Vertical)
+            
+            # Split panels into Row 1 and Row 2
+            row1_splitter = QSplitter(Qt.Orientation.Horizontal)
+            for idx in range(cols):
+                row1_splitter.addWidget(self.panels[idx])
+            v_splitter.addWidget(row1_splitter)
+            
+            row2_splitter = QSplitter(Qt.Orientation.Horizontal)
+            for idx in range(cols, count):
+                row2_splitter.addWidget(self.panels[idx])
+            v_splitter.addWidget(row2_splitter)
+            
+            # Set initial equal sizes
+            h_sizes = [self.width() // cols] * cols
+            row1_splitter.setSizes(h_sizes)
+            row2_splitter.setSizes(h_sizes)
+            v_splitter.setSizes([self.height() // 2, self.height() // 2])
+            
+            self.grid_layout.addWidget(v_splitter, 0, 0)
 
         self.populate_layer_combos()
         self.populate_theme_combos()
