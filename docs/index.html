@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>02-Multimap: Sync-up Multimaps for QGIS 4</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container navbar">
+            <div class="logo">
+                <img src="icon.png" alt="02-Multimap Logo" class="logo-img">
+                <span class="logo-text">02-Multimap</span>
+            </div>
+            <nav class="nav">
+                <a href="#features">Features</a>
+                <a href="#demo">Interactive Demo</a>
+                <a href="#e2e">E2E Verification</a>
+                <a href="https://github.com/YusufEminoglu/zero2multimap" class="btn btn-secondary">GitHub Repository</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="container hero-container">
+                <div class="hero-content">
+                    <div class="badge">QGIS 4 compatible</div>
+                    <h1>Sync-up as many maps as you can handle.</h1>
+                    <p class="hero-subtitle">Comparative spatial analysis workspace inside QGIS. Open 2, 3, 4, 6, or 8 map views in a coordinated dark-themed grid with instant navigation syncing and real-time laser crosshair tracking.</p>
+                    <div class="hero-actions">
+                        <a href="https://github.com/YusufEminoglu/zero2multimap/releases/latest" class="btn btn-primary">Download v0.1.0</a>
+                        <a href="#demo" class="btn btn-outline">Try Web Demo</a>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="mock-qgis-window">
+                        <div class="mock-titlebar">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                            <span class="title">02-Multimap Workspace</span>
+                        </div>
+                        <div class="mock-toolbar">
+                            <div class="mock-tool-item">Layout: <span class="highlight">2x2</span></div>
+                            <div class="mock-tool-item"><span class="chk checked"></span> Sync Navigation</div>
+                            <div class="mock-tool-item"><span class="chk checked"></span> Laser Pointer</div>
+                        </div>
+                        <div class="mock-grid">
+                            <div class="mock-panel" id="panel1">
+                                <div class="mock-panel-header">Panel 1 (Theme: Land Use)</div>
+                                <div class="mock-canvas">
+                                    <div class="mock-map map-a"></div>
+                                    <div class="laser-pointer"></div>
+                                </div>
+                            </div>
+                            <div class="mock-panel" id="panel2">
+                                <div class="mock-panel-header">Panel 2 (Theme: Seismic Risk)</div>
+                                <div class="mock-canvas">
+                                    <div class="mock-map map-b"></div>
+                                    <div class="laser-pointer"></div>
+                                </div>
+                            </div>
+                            <div class="mock-panel" id="panel3">
+                                <div class="mock-panel-header">Panel 3 (Theme: Heat Vulnerability)</div>
+                                <div class="mock-canvas">
+                                    <div class="mock-map map-c"></div>
+                                    <div class="laser-pointer"></div>
+                                </div>
+                            </div>
+                            <div class="mock-panel" id="panel4">
+                                <div class="mock-panel-header">Panel 4 (Theme: Population Density)</div>
+                                <div class="mock-canvas">
+                                    <div class="mock-map map-d"></div>
+                                    <div class="laser-pointer"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="features-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2>Advanced Multi-View Mapping</h2>
+                    <p>Designed for urban analysts, resilience engineers, and demographers comparing multi-dimensional spatial data.</p>
+                </div>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon font-icon">⚏</div>
+                        <h3>Dynamic Layout Grids</h3>
+                        <p>Configure grids of 2, 3, 4, 6, or 8 panels. Supports 1x2, 2x1, 1x3, 2x2, 2x3, and 2x4 configurations instantly adjusting to fit your screen size.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon font-icon">⇅</div>
+                        <h3>Coordinated Navigation</h3>
+                        <p>Pan or zoom on any map panel and all other panels follow immediately. Bi-directional syncing can also be linked to your main QGIS map canvas.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon font-icon">⊹</div>
+                        <h3>Laser Crosshairs</h3>
+                        <p>Move your mouse in one map view and glowing neon crosshairs track your cursor coordinate across all other views and the main QGIS canvas in real time.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon font-icon">≣</div>
+                        <h3>Flexible Render Sources</h3>
+                        <p>Choose between syncing all active QGIS layers, locking a focused layer over a global base map, or rendering individual QGIS Map Themes.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Web Demo Section -->
+        <section id="demo" class="demo-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2>Interactive Web Experience</h2>
+                    <p>Move your mouse across the grid panels below to see the synchronized crosshair cursor and extent coordination in action.</p>
+                </div>
+                <div class="interactive-demo">
+                    <div class="demo-controls">
+                        <button class="btn-demo active" data-grid="2x2">4 Panels (2x2)</button>
+                        <button class="btn-demo" data-grid="1x2">2 Panels (1x2)</button>
+                        <button class="btn-demo" data-grid="2x4">8 Panels (2x4)</button>
+                        <div class="spacer"></div>
+                        <div class="demo-coord">Coord X: <span id="coord-x">0.00</span>, Y: <span id="coord-y">0.00</span></div>
+                    </div>
+                    <div class="demo-grid grid-2x2" id="interactive-grid">
+                        <!-- Will be populated dynamically via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- E2E Verification Section -->
+        <section id="e2e" class="e2e-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2>Engineered for Reliability</h2>
+                    <p>02-Multimap is backed by comprehensive headless E2E testing to guarantee stability in production environments.</p>
+                </div>
+                <div class="e2e-card">
+                    <div class="e2e-badge-container">
+                        <span class="e2e-badge pass">E2E PASSING</span>
+                        <span class="e2e-badge version">QGIS 4.0+</span>
+                        <span class="e2e-badge test">GUI & Grid Sync</span>
+                    </div>
+                    <h3>Headless Integration Verification</h3>
+                    <p>Our automated testing harness initializes a headless QGIS application instance, constructs mock window environments, and executes grid transformations, lifecycle hooks, and coordinates translations.</p>
+                    <div class="terminal-window">
+                        <div class="terminal-header">
+                            <span class="terminal-dot red"></span>
+                            <span class="terminal-dot yellow"></span>
+                            <span class="terminal-dot green"></span>
+                            <span class="terminal-title">OSGeo4W Shell — python-qgis.bat</span>
+                        </div>
+                        <pre class="terminal-body"><code>Initializing E2E Import and GUI tests for 02-Multimap...
+Success: zero2multimap modules imported.
+Testing initGui...
+[Iface] Added Toolbar Icon: 02-Multimap Workspace
+Success: initGui completed.
+Testing show_dialog...
+Success: Dialog created and verified.
+Checking default panel setup (4 panels)...
+Success: Default 4 panels configuration is correct.
+Testing layout change to: 2 Panels (1x2) (expected 2 panels)...
+Success: Layout changed to 2 Panels (1x2) cleanly.
+Testing layout change to: 8 Panels (2x4) (expected 8 panels)...
+Success: Layout changed to 8 Panels (2x4) cleanly.
+Testing unload...
+Success: Unload completed.
+--------------------------------------------------
+E2E IMPORT AND GUI TESTS PASSED SUCCESSFULLY! (100% OK)
+--------------------------------------------------</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-left">
+                <div class="logo">
+                    <img src="icon.png" alt="02-Multimap Logo" class="logo-img-small">
+                    <span>02-Multimap</span>
+                </div>
+                <p>Advanced map sync-up studio for QGIS 4.</p>
+            </div>
+            <div class="footer-right">
+                <p>&copy; 2026 Yusuf Eminoğlu. GPL-3 Licensed.</p>
+                <p>Developed for the Dokuz Eylul University, Department of City and Regional Planning.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
