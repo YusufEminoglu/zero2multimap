@@ -3,6 +3,13 @@
 All notable changes to **02-Multimap** are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · versioning: [SemVer](https://semver.org/).
 
+## [0.1.1] - 2026-06-29
+
+### Fixed
+- **QGIS Hub Security Scans**: Removed base64 Subresource Integrity (SRI) hashes from CDN JavaScript and CSS Leaflet link elements in print layouts exporter to resolve secrets scanner triggers.
+- **Repository Cleanups**: Deleted empty hidden placeholder files (`icons/.gitkeep`) flagged by the Hub's hidden-file scanner.
+- **Code Quality Formatting**: Removed unused PyQt/QGIS imports and formatted Python files to meet Flake8 standard checks.
+
 ## [0.1.0] - 2026-06-29
 
 ### Added
