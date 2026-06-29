@@ -188,7 +188,7 @@ class MultiMapDialog(QDialog):
         # Cursor tracking markers
         self.main_canvas_marker: QgsVertexMarker | None = None
 
-        self.setWindowTitle("PlanX MultiMap Workspace")
+        self.setWindowTitle("02-Multimap: Sync-up Multimaps")
         self.setWindowFlags(WINDOW_FLAGS)
         self.resize(1100, 750)
         self._build_ui()

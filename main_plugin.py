@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
-"""PlanX MultiMap — main plugin class.
+"""02-Multimap — main plugin class.
 
-Integrates the multi-panel workspace into QGIS 4 menus under the 'PlanX' menu group
-and provides toolbar launch shortcuts.
+Integrates the multi-panel workspace into QGIS 4 menus and provides
+toolbar launch shortcuts.
 """
 from __future__ import annotations
 
 import os
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QMessageBox
+from qgis.PyQt.QtWidgets import QAction, QMenu
 
 
-class PlanXMultiMapPlugin:
-    MENU_NAME = "PlanX"
+class O2MultiMapPlugin:
+    MENU_NAME = "&02-Multimap"
 
     def __init__(self, iface):
         self.iface = iface
@@ -20,25 +20,32 @@ class PlanXMultiMapPlugin:
         self.icon_path = os.path.join(self.plugin_dir, "icons", "icon.png")
         self.action: QAction | None = None
         self.dialog = None
+        self.menu: QMenu | None = None
 
     def initGui(self) -> None:
         self.action = QAction(
             QIcon(self.icon_path), 
-            "PlanX MultiMap Workspace", 
+            "02-Multimap Workspace", 
             self.iface.mainWindow()
         )
         self.action.setStatusTip("Open multi-panel synchronized map viewer workspace.")
         self.action.triggered.connect(self.show_dialog)
         
-        # Add to the unified PlanX toolbar & menu
+        # Add a custom top-level menu
+        self.menu = QMenu(self.MENU_NAME, self.iface.mainWindow().menuBar())
+        self.iface.mainWindow().menuBar().addMenu(self.menu)
+        self.menu.addAction(self.action)
+        
+        # Add to standard toolbar
         self.iface.addToolBarIcon(self.action)
-        self.iface.addPluginToMenu(self.MENU_NAME, self.action)
 
     def unload(self) -> None:
         if self.action:
-            self.iface.removePluginMenu(self.MENU_NAME, self.action)
             self.iface.removeToolBarIcon(self.action)
             self.action = None
+        if self.menu:
+            self.menu.deleteLater()
+            self.menu = None
         if self.dialog:
             self.dialog.close()
             self.dialog = None

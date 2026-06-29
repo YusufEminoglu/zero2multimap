@@ -1,8 +1,8 @@
-# PlanX MultiMap
+# 02-Multimap
 
 Multi-panel synchronized map visualization workspace for QGIS 4.
 
-**PlanX MultiMap** enables side-by-side comparative spatial analysis. Users can configure a grid layout containing 2, 3, 4, 6, or 8 independent map views. Panning and zooming in one view synchronizes all others, and a coordinated laser crosshair tracks cursor position across all canvases in real time.
+**02-Multimap: Sync-up Multimaps** enables side-by-side comparative spatial analysis. Users can configure a grid layout containing 2, 3, 4, 6, or 8 independent map views. Panning and zooming in one view synchronizes all others, and a coordinated laser crosshair tracks cursor position across all canvases in real time.
 
 ## Features
 
@@ -18,10 +18,10 @@ Multi-panel synchronized map visualization workspace for QGIS 4.
 
 ## Architecture
 
-- [__init__.py](file:///C:/Users/YE/PyCharmMiscProject/qgis_plugins/planx_multimap/__init__.py) — Standard QGIS plugin entry hook.
-- [main_plugin.py](file:///C:/Users/YE/PyCharmMiscProject/qgis_plugins/planx_multimap/main_plugin.py) — Plugin actions and menu hook registrations.
-- [dialog.py](file:///C:/Users/YE/PyCharmMiscProject/qgis_plugins/planx_multimap/dialog.py) — Layout grid container, map synchronization logic, and coordinate event filtering.
+- [__init__.py](file:///C:/Users/YE/PyCharmMiscProject/qgis_plugins/zero2multimap/__init__.py) — Standard QGIS plugin entry hook.
+- [main_plugin.py](file:///C:/Users/YE/PyCharmMiscProject/qgis_plugins/zero2multimap/main_plugin.py) — Plugin actions and menu hook registrations.
+- [dialog.py](file:///C:/Users/YE/PyCharmMiscProject/qgis_plugins/zero2multimap/dialog.py) — Layout grid container, map synchronization logic, and coordinate event filtering.
 
 ## License
 
-GPL-3.0-or-later. Part of the [PlanX Ecosystem](https://github.com/YusufEminoglu).
+GPL-3.0-or-later. Part of the [02viz Ecosystem](https://github.com/YusufEminoglu).
