@@ -25,6 +25,7 @@ from qgis.PyQt.QtWidgets import (
 )
 from qgis.core import QgsProject, QgsMapLayer, QgsPointXY, QgsCoordinateReferenceSystem
 from qgis.gui import QgsMapCanvas, QgsVertexMarker, QgsMapToolPan
+from .print_layout import PrintLayoutDialog
 
 # Resolved dynamically to bypass static checks and work on both PyQt5 & PyQt6
 WINDOW_FLAGS = Qt.WindowFlags()
@@ -300,6 +301,22 @@ class MultiMapDialog(QDialog):
         self.refresh_btn = QPushButton("Refresh All")
         self.refresh_btn.clicked.connect(self.refresh_all_canvases)
         toolbar_layout.addWidget(self.refresh_btn)
+
+        # Print Layout button
+        self.print_btn = QPushButton("Print Layout…")
+        self.print_btn.clicked.connect(self.show_print_layout)
+        self.print_btn.setToolTip("Open print layout dialog to customize and export comparative maps.")
+        self.print_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #2a8f85;
+                color: #ffffff;
+                border: 1px solid #237a72;
+            }
+            QPushButton:hover {
+                background-color: #319c91;
+            }
+        """)
+        toolbar_layout.addWidget(self.print_btn)
 
         root_layout.addWidget(self.toolbar_frame)
 
@@ -618,6 +635,11 @@ class MultiMapDialog(QDialog):
         """Triggers a render refresh on all canvases."""
         for panel in self.panels:
             panel.canvas.refresh()
+
+    def show_print_layout(self) -> None:
+        """Instantiates and displays the print layout exporter dialog."""
+        dlg = PrintLayoutDialog(self, self.iface)
+        dlg.exec()
 
     # ───────────────────────── Navigation Sync ─────────────────────────
 
