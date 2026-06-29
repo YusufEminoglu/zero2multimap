@@ -407,8 +407,7 @@ class MultiMapDialog(QDialog):
 
         # Clean main canvas marker if any
         if self.main_canvas_marker:
-            self.main_canvas_marker.hide()
-            self.main_canvas_marker.deleteLater()
+            self.iface.mapCanvas().scene().removeItem(self.main_canvas_marker)
             self.main_canvas_marker = None
 
         # Clean grid layout children
@@ -640,7 +639,6 @@ class MultiMapDialog(QDialog):
         for panel in self.panels:
             panel.marker.hide()
         if self.main_canvas_marker:
-            self.main_canvas_marker.hide()
-            self.main_canvas_marker.deleteLater()
+            self.iface.mapCanvas().scene().removeItem(self.main_canvas_marker)
             self.main_canvas_marker = None
         super().closeEvent(event)
