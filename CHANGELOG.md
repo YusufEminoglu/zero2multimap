@@ -1,21 +1,19 @@
 # Changelog
 
-## [0.1.0] - 2026-06-29
-
-- Initial release
-
-## [0.1.0] - 2026-06-29
-
-- Initial release
-
 All notable changes to **02-Multimap** are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · versioning: [SemVer](https://semver.org/).
 
 ## [0.1.0] - 2026-06-29
 
-- Initial release of 02-Multimap: Sync-up Multimaps workspace for QGIS 4.
-- Coordinated multi-panel visualization with 2, 3, 4, 6, and 8 grid views.
-- Bi-directional extent and navigation syncing.
-- Coordinated laser pointer tracking with custom crosshairs.
-- Support for syncing project layers, map themes, and focus layer settings.
-- Sleek dark mode visual interface.
+### Added
+- **Initial Release** of **02-Multimap: Sync-up Multimaps** workspace supporting QGIS 3.40+ LTR and QGIS 4.x.
+- **Coordinated Grid Viewports**: Snap and sync maps side-by-side (2, 3, 4, 6, or 8 panels).
+- **Adjustable Panel Resizing**: Integrates horizontal and vertical split dividers (`QSplitter`) with styled handles for smooth viewport resizing.
+- **Bi-directional Navigation Syncing**: Zoom and pan maps simultaneously across all viewports (including synchronization with QGIS main canvas).
+- **Manual Alignment Controls**: Dedicated *Match Scale* (aligns zoom levels while keeping neighborhood centers) and *Match Extent* buttons.
+- **Coordinated Laser Pointer**: Real-time cursor coordinates and custom crosshair trackers visible across all active panels.
+- **Multi-Render Display Modes**: Canvases can sync the main map, follow designated project Map Themes, or lock unique focus layers on top of a global base layer.
+- **Premium Light Design System**: Fresh `02viz`-inspired light UI system with slate backgrounds, teal accents, and card container borders.
+- **Print Layout Exporter**: Customizable print sheet outputs with 5 North Arrow styles, 5 Scalebar styles, and vector layouts.
+- **Multi-Format Print Exports**: Export maps to high-resolution PNG, JPEG, SVG, or PDF files.
+- **Interactive HTML Dashboard Exporter**: Exports the entire comparative workspace as a fully functional, synchronized Leaflet.js HTML page with embedded GeoJSON vector layers and laser cursors.
