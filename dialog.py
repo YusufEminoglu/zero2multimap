@@ -113,7 +113,7 @@ class MapPanelWidget(QFrame):
 
         # Map Canvas
         self.canvas = QgsMapCanvas(self)
-        self.canvas.setCanvasColor(QColor(30, 30, 30))
+        self.canvas.setCanvasColor(QColor(240, 242, 245))
         layout.addWidget(self.canvas, 1)
 
         # Standard pan tool
@@ -290,55 +290,56 @@ class MultiMapDialog(QDialog):
         root_layout.addWidget(self.status_frame)
 
     def _apply_qss(self) -> None:
-        """Applies a premium, highly responsive dark theme stylesheet."""
+        """Applies a premium, highly responsive light theme stylesheet matching the 02viz family."""
         self.setStyleSheet("""
             QDialog {
-                background-color: #1e1e1e;
-                color: #e0e0e0;
+                background-color: #fbfbfd;
+                color: #2c3e46;
                 font-family: "Segoe UI", Inter, Helvetica, Arial, sans-serif;
             }
             QFrame#ToolbarFrame {
-                background-color: #252526;
-                border: 1px solid #3c3c3c;
-                border-radius: 4px;
+                background-color: #ffffff;
+                border: 1px solid #cbd3da;
+                border-radius: 6px;
             }
             QFrame#StatusFrame {
-                background-color: #007acc;
-                border-top: 1px solid #005999;
+                background-color: #eef1f4;
+                border-top: 1px solid #cbd3da;
             }
             QLabel {
-                color: #cccccc;
+                color: #2c3e46;
                 font-size: 12px;
             }
             QLabel#StatusLabel {
-                color: #ffffff;
-                font-weight: 500;
+                color: #16323f;
+                font-weight: 600;
             }
             QLabel#CoordsLabel {
-                color: #d0e0f5;
+                color: #2a8f85;
                 font-family: "Consolas", monospace;
+                font-weight: 600;
             }
             QCheckBox {
-                color: #cccccc;
+                color: #2c3e46;
                 spacing: 5px;
                 font-size: 12px;
             }
             QCheckBox::indicator {
                 width: 14px;
                 height: 14px;
-                background-color: #333333;
-                border: 1px solid #555555;
-                border-radius: 2px;
+                background-color: #ffffff;
+                border: 1px solid #cbd3da;
+                border-radius: 3px;
             }
             QCheckBox::indicator:checked {
-                background-color: #007acc;
-                border: 1px solid #0098ff;
+                background-color: #2a8f85;
+                border: 1px solid #237a72;
             }
             QComboBox {
-                background-color: #333333;
-                color: #ffffff;
-                border: 1px solid #555555;
-                border-radius: 3px;
+                background-color: #ffffff;
+                color: #16323f;
+                border: 1px solid #cbd3da;
+                border-radius: 6px;
                 padding: 3px 6px;
                 min-width: 120px;
                 font-size: 11px;
@@ -347,41 +348,49 @@ class MultiMapDialog(QDialog):
                 subcontrol-origin: padding;
                 subcontrol-position: top right;
                 width: 16px;
-                border-left: 1px solid #555555;
+                border-left: 1px solid #cbd3da;
             }
             QComboBox:hover {
-                background-color: #404040;
-                border-color: #007acc;
+                background-color: #ffffff;
+                border-color: #2a8f85;
+            }
+            QComboBox QAbstractItemView {
+                background: #ffffff;
+                color: #16323f;
+                border: 1px solid #cbd3da;
+                selection-background-color: #2a8f85;
+                selection-color: #ffffff;
+                outline: 0;
             }
             QPushButton {
-                background-color: #0e639c;
-                color: #ffffff;
-                border: 1px solid #1177bb;
-                border-radius: 4px;
+                background-color: #eef1f4;
+                color: #1f333d;
+                border: 1px solid #cbd3da;
+                border-radius: 6px;
                 padding: 4px 12px;
                 font-weight: bold;
                 font-size: 12px;
             }
             QPushButton:hover {
-                background-color: #1177bb;
+                background-color: #e4e9ed;
             }
             QPushButton:pressed {
-                background-color: #0a4b75;
+                background-color: #dbe1e6;
             }
             QFrame#MapPanel {
-                background-color: #2b2b2b;
-                border: 2px solid #3c3c3c;
-                border-radius: 4px;
+                background-color: #ffffff;
+                border: 2px solid #cbd3da;
+                border-radius: 8px;
             }
             QFrame#MapPanel[active="true"] {
-                border: 2px solid #2ecc71;
+                border: 2px solid #2a8f85;
             }
             QWidget#PanelHeader {
-                background-color: #333333;
-                border-bottom: 1px solid #2b2b2b;
+                background-color: #eef1f4;
+                border-bottom: 1px solid #cbd3da;
             }
             QLabel#PanelTitle {
-                color: #2ecc71;
+                color: #16323f;
                 font-weight: bold;
                 font-size: 12px;
             }
