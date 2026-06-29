@@ -248,6 +248,17 @@ class MultiMapDialog(QDialog):
         self.laser_chk.toggled.connect(self._on_laser_toggled)
         toolbar_layout.addWidget(self.laser_chk)
 
+        # Scale and Extent Align Buttons
+        self.match_scale_btn = QPushButton("Match Scale")
+        self.match_scale_btn.clicked.connect(self.match_scales_to_active)
+        self.match_scale_btn.setToolTip("Sync zoom scales of all panels to match the active panel's scale, preserving centers.")
+        toolbar_layout.addWidget(self.match_scale_btn)
+
+        self.match_extent_btn = QPushButton("Match Extent")
+        self.match_extent_btn.clicked.connect(self.match_extents_to_active)
+        self.match_extent_btn.setToolTip("Sync full extent (center and zoom scale) of all panels to match the active panel.")
+        toolbar_layout.addWidget(self.match_extent_btn)
+
         # Global Base Layer Selector
         toolbar_layout.addWidget(QLabel("Global Base Layer:"))
         self.base_layer_combo = QComboBox()
@@ -568,6 +579,7 @@ class MultiMapDialog(QDialog):
 
     def set_active_panel(self, active_panel: MapPanelWidget) -> None:
         """Visually marks a panel as active by updating styling dynamic property."""
+        self.active_panel = active_panel
         for panel in self.panels:
             panel.setProperty("active", panel == active_panel)
             panel.style().unpolish(panel)
@@ -622,6 +634,66 @@ class MultiMapDialog(QDialog):
                 panel.canvas.setExtent(extent)
                 panel.canvas.refresh()
                 panel.canvas.blockSignals(False)
+        finally:
+            self._is_syncing = False
+
+    # ───────────────────────── Scale/Extent Alignment ─────────────────────────
+
+    def match_scales_to_active(self) -> None:
+        """Aligns the zoom scale of all panels to match the active panel's scale, preserving their centers."""
+        if not hasattr(self, "active_panel") or not self.active_panel:
+            if self.panels:
+                self.active_panel = self.panels[0]
+            else:
+                return
+
+        target_scale = self.active_panel.canvas.scale()
+
+        self._is_syncing = True
+        try:
+            for panel in self.panels:
+                if panel == self.active_panel:
+                    continue
+                panel.canvas.blockSignals(True)
+                panel.canvas.zoomScale(target_scale)
+                panel.canvas.refresh()
+                panel.canvas.blockSignals(False)
+
+            if self.sync_main_chk.isChecked():
+                main_canvas = self.iface.mapCanvas()
+                main_canvas.blockSignals(True)
+                main_canvas.zoomScale(target_scale)
+                main_canvas.refresh()
+                main_canvas.blockSignals(False)
+        finally:
+            self._is_syncing = False
+
+    def match_extents_to_active(self) -> None:
+        """Aligns the full extent of all panels to match the active panel's extent."""
+        if not hasattr(self, "active_panel") or not self.active_panel:
+            if self.panels:
+                self.active_panel = self.panels[0]
+            else:
+                return
+
+        target_extent = self.active_panel.canvas.extent()
+
+        self._is_syncing = True
+        try:
+            for panel in self.panels:
+                if panel == self.active_panel:
+                    continue
+                panel.canvas.blockSignals(True)
+                panel.canvas.setExtent(target_extent)
+                panel.canvas.refresh()
+                panel.canvas.blockSignals(False)
+
+            if self.sync_main_chk.isChecked():
+                main_canvas = self.iface.mapCanvas()
+                main_canvas.blockSignals(True)
+                main_canvas.setExtent(target_extent)
+                main_canvas.refresh()
+                main_canvas.blockSignals(False)
         finally:
             self._is_syncing = False
 
