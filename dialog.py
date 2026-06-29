@@ -25,23 +25,11 @@ from qgis.PyQt.QtWidgets import (
 from qgis.core import QgsProject, QgsMapLayer, QgsPointXY, QgsCoordinateReferenceSystem
 from qgis.gui import QgsMapCanvas, QgsVertexMarker, QgsMapToolPan
 
-# PyQt5/PyQt6 Enum Compatibility Helpers
-try:
-    ALIGN_CENTER = Qt.AlignmentFlag.AlignCenter
-    ORIENT_HORIZONTAL = Qt.Orientation.Horizontal
-    WINDOW_FLAGS = (
-        Qt.WindowType.Window
-        | Qt.WindowType.WindowMinMaxButtonsHint
-        | Qt.WindowType.WindowCloseButtonHint
-    )
-except AttributeError:
-    ALIGN_CENTER = Qt.AlignCenter
-    ORIENT_HORIZONTAL = Qt.Horizontal
-    WINDOW_FLAGS = (
-        Qt.Window
-        | Qt.WindowMinMaxButtonsHint
-        | Qt.WindowCloseButtonHint
-    )
+WINDOW_FLAGS = (
+    Qt.WindowType.Window
+    | Qt.WindowType.WindowMinMaxButtonsHint
+    | Qt.WindowType.WindowCloseButtonHint
+)
 
 
 class CanvasEventFilter(QObject):
