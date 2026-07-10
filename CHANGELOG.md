@@ -3,6 +3,14 @@
 All notable changes to **02-Multimap** are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · versioning: [SemVer](https://semver.org/).
 
+## [0.1.5] - 2026-07-10
+
+### Changed
+- Remove the top-level "&02-Multimap" QGIS menu registration; the plugin now only adds its launch icon to the standard toolbar, so it no longer shows up as its own menu tab next to Help.
+
+### Added
+- Remember the last export folder used by the print/HTML layout exporter between QGIS sessions.
+
 ## [0.1.4] - 2026-07-10
 
 ### Added

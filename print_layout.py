@@ -7,7 +7,7 @@ orientation, scalebar style, north arrow graphic, and export to PNG, JPEG, SVG, 
 from __future__ import annotations
 
 import os
-from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtCore import Qt, QSettings
 from qgis.PyQt.QtGui import QFont
 from qgis.PyQt.QtWidgets import (
     QDialog,
@@ -145,13 +145,18 @@ class PrintLayoutDialog(QDialog):
         else:
             ext = ".svg"
 
+        last_dir = QSettings().value("zero2multimap/last_export_dir", "")
+        if not (isinstance(last_dir, str) and os.path.isdir(last_dir)):
+            last_dir = os.path.expanduser("~")
+
         filepath, _ = QFileDialog.getSaveFileName(
-            self, "Select Export Path", "", format_filter
+            self, "Select Export Path", last_dir, format_filter
         )
         if filepath:
             if not filepath.lower().endswith(ext):
                 filepath += ext
             self.path_input.setText(filepath)
+            QSettings().setValue("zero2multimap/last_export_dir", os.path.dirname(filepath))
 
     def execute_export(self) -> None:
         """Constructs layout in memory and exports to path."""
