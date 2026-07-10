@@ -289,6 +289,11 @@ class MultiMapDialog(QDialog):
         self.match_extent_btn.setToolTip("Sync full extent (center and zoom scale) of all panels to match the active panel.")
         toolbar_layout.addWidget(self.match_extent_btn)
 
+        self.fit_all_btn = QPushButton("Fit All Panels")
+        self.fit_all_btn.setToolTip("Zoom every panel to the full extent of its visible layers.")
+        self.fit_all_btn.clicked.connect(self.fit_all_panels)
+        toolbar_layout.addWidget(self.fit_all_btn)
+
         # Global Base Layer Selector
         toolbar_layout.addWidget(QLabel("Global Base Layer:"))
         self.base_layer_combo = QComboBox()
@@ -643,6 +648,26 @@ class MultiMapDialog(QDialog):
         """Triggers a render refresh on all canvases."""
         for panel in self.panels:
             panel.canvas.refresh()
+
+    def fit_all_panels(self) -> None:
+        """Zoom each map panel to the full extent of its visible layers."""
+        if not self.panels:
+            return
+        self._is_syncing = True
+        try:
+            for panel in self.panels:
+                panel.canvas.blockSignals(True)
+                panel.canvas.zoomToFullExtent()
+                panel.canvas.refresh()
+                panel.canvas.blockSignals(False)
+            if self.sync_main_chk.isChecked():
+                main_canvas = self.iface.mapCanvas()
+                main_canvas.blockSignals(True)
+                main_canvas.zoomToFullExtent()
+                main_canvas.refresh()
+                main_canvas.blockSignals(False)
+        finally:
+            self._is_syncing = False
 
     def show_print_layout(self) -> None:
         """Instantiates and displays the print layout exporter dialog."""

@@ -3,6 +3,12 @@
 All notable changes to **02-Multimap** are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · versioning: [SemVer](https://semver.org/).
 
+## [0.1.4] - 2026-07-10
+
+### Added
+- Added a **Fit All Panels** action that zooms every comparison canvas to the full extent of its visible layers, with optional main-canvas alignment.
+- Replaced opaque white icon padding with a transparent background for clean display on QGIS themes.
+
 ## [0.1.3] - 2026-06-29
 
 ### Changed
