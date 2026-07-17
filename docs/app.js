@@ -1,4 +1,4 @@
-// 02-Multimap Landing Page Application Logic
+// 02Multimap Landing Page Application Logic
 
 document.addEventListener('DOMContentLoaded', () => {
     const gridContainer = document.getElementById('interactive-grid');

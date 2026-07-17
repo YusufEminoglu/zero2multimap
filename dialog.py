@@ -21,8 +21,9 @@ from qgis.PyQt.QtWidgets import (
     QWidget,
     QSplitter,
     QTextBrowser,
+    QMessageBox,
 )
-from qgis.core import QgsProject, QgsMapLayer
+from qgis.core import QgsProject, QgsMapLayer, QgsCoordinateTransform, QgsCsException
 from qgis.gui import QgsMapCanvas, QgsVertexMarker, QgsMapToolPan
 from .print_layout import PrintLayoutDialog
 
@@ -119,15 +120,28 @@ class MapPanelWidget(QFrame):
         self.title_label.setObjectName("PanelTitle")
         header_layout.addWidget(self.title_label)
 
-        # Mode Selector
+        # Mode selector. The wording explains the result instead of exposing
+        # the internal "focus layer" term that confused first-time users.
         self.mode_combo = QComboBox()
-        self.mode_combo.addItems(["Sync Main Map", "Focus Layer", "Map Theme"])
+        self.mode_combo.addItems([
+            "Follow Main Map",
+            "Compare One Layer",
+            "Use Map Theme",
+        ])
+        self.mode_combo.setToolTip(
+            "Choose what this panel shows. Use 'Compare One Layer' to give "
+            "every panel a different layer."
+        )
         self.mode_combo.currentTextChanged.connect(self._on_mode_changed)
         header_layout.addWidget(self.mode_combo)
 
         # Layer Selector (visible in layer mode)
         self.layer_combo = QComboBox()
         self.layer_combo.setVisible(False)
+        self.layer_combo.setToolTip(
+            "The selected layer is isolated in this panel. Repeat with a "
+            "different layer in each panel, or use Auto-fill."
+        )
         self.layer_combo.currentTextChanged.connect(self.update_canvas_layers)
         header_layout.addWidget(self.layer_combo)
 
@@ -162,18 +176,36 @@ class MapPanelWidget(QFrame):
         super().mousePressEvent(event)
 
     def _on_mode_changed(self, mode_text: str) -> None:
-        if mode_text == "Sync Main Map":
+        if mode_text in ("Follow Main Map", "Sync Main Map"):
             self.mode = "sync"
             self.layer_combo.setVisible(False)
             self.theme_combo.setVisible(False)
-        elif mode_text == "Focus Layer":
+        elif mode_text in ("Compare One Layer", "Focus Layer"):
             self.mode = "layer"
             self.layer_combo.setVisible(True)
             self.theme_combo.setVisible(False)
-        elif mode_text == "Map Theme":
+        elif mode_text in ("Use Map Theme", "Map Theme"):
             self.mode = "theme"
             self.layer_combo.setVisible(False)
             self.theme_combo.setVisible(True)
+        self.update_canvas_layers()
+
+    def selected_layer(self) -> QgsMapLayer | None:
+        """Return the focus layer selected by stable project layer ID."""
+        layer_id = self.layer_combo.currentData()
+        if not layer_id:
+            return None
+        return QgsProject.instance().mapLayer(layer_id)
+
+    def set_comparison_layer(self, layer: QgsMapLayer) -> None:
+        """Switch this panel to one-layer comparison mode for ``layer``."""
+        layer_index = self.layer_combo.findData(layer.id())
+        if layer_index < 0:
+            return
+        self.layer_combo.blockSignals(True)
+        self.layer_combo.setCurrentIndex(layer_index)
+        self.layer_combo.blockSignals(False)
+        self.mode_combo.setCurrentText("Compare One Layer")
         self.update_canvas_layers()
 
     def update_canvas_layers(self) -> None:
@@ -183,11 +215,10 @@ class MapPanelWidget(QFrame):
         if self.mode == "sync":
             self.canvas.setLayers(self.iface.mapCanvas().layers())
         elif self.mode == "layer":
-            selected_layer_name = self.layer_combo.currentText()
-            layers = project.mapLayersByName(selected_layer_name)
             canvas_layers = []
-            if layers:
-                canvas_layers.append(layers[0])
+            selected_layer = self.selected_layer()
+            if selected_layer:
+                canvas_layers.append(selected_layer)
 
             # Fetch global base layer if selected in main window
             window = self.window()
@@ -219,7 +250,7 @@ class MultiMapDialog(QDialog):
         # Cursor tracking markers
         self.main_canvas_marker: QgsVertexMarker | None = None
 
-        self.setWindowTitle("02-Multimap: Sync-up Multimaps")
+        self.setWindowTitle("02Multimap: Sync-up Map Layers")
         self.setWindowFlags(WINDOW_FLAGS)
         self.resize(1100, 750)
         self._build_ui()
@@ -236,6 +267,9 @@ class MultiMapDialog(QDialog):
         self.iface.mapCanvas().extentsChanged.connect(self.on_main_canvas_extent_changed)
 
         # Build initial 4 panels
+        self.grid_combo.blockSignals(True)
+        self.grid_combo.setCurrentText("4 Panels (2x2)")
+        self.grid_combo.blockSignals(False)
         self.set_grid_layout("4 Panels (2x2)")
 
     def _build_ui(self) -> None:
@@ -246,12 +280,15 @@ class MultiMapDialog(QDialog):
         # Toolbar Frame
         self.toolbar_frame = QFrame()
         self.toolbar_frame.setObjectName("ToolbarFrame")
-        toolbar_layout = QHBoxLayout(self.toolbar_frame)
-        toolbar_layout.setContentsMargins(8, 6, 8, 6)
-        toolbar_layout.setSpacing(12)
+        toolbar_layout = QVBoxLayout(self.toolbar_frame)
+        toolbar_layout.setContentsMargins(10, 8, 10, 8)
+        toolbar_layout.setSpacing(6)
+
+        setup_row = QHBoxLayout()
+        setup_row.setSpacing(8)
 
         # Grid layout selector
-        toolbar_layout.addWidget(QLabel("Grid Layout:"))
+        setup_row.addWidget(QLabel("Panels:"))
         self.grid_combo = QComboBox()
         self.grid_combo.addItems([
             "2 Panels (1x2)",
@@ -262,72 +299,99 @@ class MultiMapDialog(QDialog):
             "8 Panels (2x4)"
         ])
         self.grid_combo.currentTextChanged.connect(self.set_grid_layout)
-        toolbar_layout.addWidget(self.grid_combo)
+        self.grid_combo.setToolTip("Choose how many comparison panels to create.")
+        setup_row.addWidget(self.grid_combo)
+
+        self.auto_fill_btn = QPushButton("Choose for Me · Current Extent")
+        self.auto_fill_btn.setObjectName("PrimaryAction")
+        self.auto_fill_btn.setToolTip(
+            "Assign a different project layer to every panel. Layers that "
+            "intersect the current QGIS map extent are chosen first."
+        )
+        self.auto_fill_btn.clicked.connect(self.auto_fill_from_current_extent)
+        setup_row.addWidget(self.auto_fill_btn)
+
+        # Global base layer selector for one-layer comparisons.
+        setup_row.addWidget(QLabel("Optional background:"))
+        self.base_layer_combo = QComboBox()
+        self.base_layer_combo.setToolTip(
+            "Optional shared background shown beneath each one-layer comparison."
+        )
+        self.base_layer_combo.currentTextChanged.connect(self.refresh_layer_panels)
+        setup_row.addWidget(self.base_layer_combo)
+
+        setup_row.addStretch(1)
+
+        self.refresh_btn = QPushButton("Refresh")
+        self.refresh_btn.clicked.connect(self.refresh_all_canvases)
+        setup_row.addWidget(self.refresh_btn)
+
+        self.print_btn = QPushButton("Export / Print…")
+        self.print_btn.clicked.connect(self.show_print_layout)
+        self.print_btn.setToolTip(
+            "Export a print layout or a self-contained interactive HTML dashboard."
+        )
+        setup_row.addWidget(self.print_btn)
+
+        self.guide_btn = QPushButton("Quick Guide")
+        self.guide_btn.clicked.connect(self.show_quick_guide)
+        self.guide_btn.setToolTip(
+            "Show a short guide to panel comparison and synchronized navigation."
+        )
+        setup_row.addWidget(self.guide_btn)
+        toolbar_layout.addLayout(setup_row)
+
+        navigation_row = QHBoxLayout()
+        navigation_row.setSpacing(9)
 
         # Synchronization options
         self.sync_extents_chk = QCheckBox("Sync Navigation")
         self.sync_extents_chk.setChecked(True)
-        toolbar_layout.addWidget(self.sync_extents_chk)
+        navigation_row.addWidget(self.sync_extents_chk)
 
         self.sync_main_chk = QCheckBox("Sync with QGIS Canvas")
         self.sync_main_chk.setChecked(True)
-        toolbar_layout.addWidget(self.sync_main_chk)
+        navigation_row.addWidget(self.sync_main_chk)
 
         self.laser_chk = QCheckBox("Laser Crosshair")
         self.laser_chk.setChecked(True)
         self.laser_chk.toggled.connect(self._on_laser_toggled)
-        toolbar_layout.addWidget(self.laser_chk)
+        navigation_row.addWidget(self.laser_chk)
+
+        navigation_row.addSpacing(8)
 
         # Scale and Extent Align Buttons
         self.match_scale_btn = QPushButton("Match Scale")
         self.match_scale_btn.clicked.connect(self.match_scales_to_active)
-        self.match_scale_btn.setToolTip("Sync zoom scales of all panels to match the active panel's scale, preserving centers.")
-        toolbar_layout.addWidget(self.match_scale_btn)
+        self.match_scale_btn.setToolTip(
+            "Sync zoom scales of all panels to match the active panel's scale, "
+            "preserving centers."
+        )
+        navigation_row.addWidget(self.match_scale_btn)
 
         self.match_extent_btn = QPushButton("Match Extent")
         self.match_extent_btn.clicked.connect(self.match_extents_to_active)
-        self.match_extent_btn.setToolTip("Sync full extent (center and zoom scale) of all panels to match the active panel.")
-        toolbar_layout.addWidget(self.match_extent_btn)
+        self.match_extent_btn.setToolTip(
+            "Sync full extent (center and zoom scale) of all panels to match "
+            "the active panel."
+        )
+        navigation_row.addWidget(self.match_extent_btn)
 
         self.fit_all_btn = QPushButton("Fit All Panels")
         self.fit_all_btn.setToolTip("Zoom every panel to the full extent of its visible layers.")
         self.fit_all_btn.clicked.connect(self.fit_all_panels)
-        toolbar_layout.addWidget(self.fit_all_btn)
+        navigation_row.addWidget(self.fit_all_btn)
+        navigation_row.addStretch(1)
 
-        # Global Base Layer Selector
-        toolbar_layout.addWidget(QLabel("Global Base Layer:"))
-        self.base_layer_combo = QComboBox()
-        self.base_layer_combo.currentTextChanged.connect(self.refresh_layer_panels)
-        toolbar_layout.addWidget(self.base_layer_combo)
-
-        toolbar_layout.addStretch(1)
-
-        # Refresh all button
-        self.refresh_btn = QPushButton("Refresh All")
-        self.refresh_btn.clicked.connect(self.refresh_all_canvases)
-        toolbar_layout.addWidget(self.refresh_btn)
-
-        # Print Layout button
-        self.print_btn = QPushButton("Print Layout…")
-        self.print_btn.clicked.connect(self.show_print_layout)
-        self.print_btn.setToolTip("Open print layout dialog to customize and export comparative maps.")
-        self.print_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #2a8f85;
-                color: #ffffff;
-                border: 1px solid #237a72;
-            }
-            QPushButton:hover {
-                background-color: #319c91;
-            }
-        """)
-        toolbar_layout.addWidget(self.print_btn)
-
-        # Quick Guide button
-        self.guide_btn = QPushButton("Quick Guide")
-        self.guide_btn.clicked.connect(self.show_quick_guide)
-        self.guide_btn.setToolTip("Show quick help guide on how to use the comparative maps workspace.")
-        toolbar_layout.addWidget(self.guide_btn)
+        self.workflow_hint = QLabel(
+            "<b>Fast comparison:</b> choose a panel count, then click "
+            "<b>Choose for Me</b>. Each panel will switch to "
+            "<b>Compare One Layer</b> and show a different layer."
+        )
+        self.workflow_hint.setObjectName("WorkflowHint")
+        self.workflow_hint.setWordWrap(True)
+        navigation_row.addWidget(self.workflow_hint, 1)
+        toolbar_layout.addLayout(navigation_row)
 
         root_layout.addWidget(self.toolbar_frame)
 
@@ -387,6 +451,11 @@ class MultiMapDialog(QDialog):
                 font-family: "Consolas", monospace;
                 font-weight: 600;
             }
+            QLabel#WorkflowHint {
+                color: #52636c;
+                padding-left: 6px;
+                font-size: 11px;
+            }
             QCheckBox {
                 color: #2c3e46;
                 spacing: 5px;
@@ -444,6 +513,16 @@ class MultiMapDialog(QDialog):
             }
             QPushButton:pressed {
                 background-color: #dbe1e6;
+            }
+            QPushButton#PrimaryAction {
+                background-color: #2a8f85;
+                color: #ffffff;
+                border-color: #237a72;
+                padding-left: 14px;
+                padding-right: 14px;
+            }
+            QPushButton#PrimaryAction:hover {
+                background-color: #319c91;
             }
             QFrame#MapPanel {
                 background-color: #ffffff;
@@ -573,42 +652,138 @@ class MultiMapDialog(QDialog):
 
         self.set_active_panel(self.panels[0])
         self._is_syncing = False
+        self.workflow_hint.setText(
+            "<b>Fast comparison:</b> click <b>Choose for Me</b> to fill "
+            f"all {count} panels with different layers from the current extent."
+        )
         self.refresh_all_canvases()
 
     def get_global_base_layer(self) -> QgsMapLayer | None:
         """Returns the layer selected globally as base layer, if any."""
-        text = self.base_layer_combo.currentText()
-        if not text or text == "None":
+        layer_id = self.base_layer_combo.currentData()
+        if not layer_id:
             return None
-        layers = QgsProject.instance().mapLayersByName(text)
-        return layers[0] if layers else None
+        return QgsProject.instance().mapLayer(layer_id)
 
     # ───────────────────────── Sync & Fill Combos ─────────────────────────
 
     def populate_layer_combos(self) -> None:
         """Fills the Layer Selector in all panels and the global base layer combobox."""
-        layers = [layer.name() for layer in QgsProject.instance().mapLayers().values()]
-        layers.sort()
+        layers = list(QgsProject.instance().mapLayers().values())
+        layers.sort(key=lambda layer: layer.name().casefold())
 
         # Update global base layer
-        current_base = self.base_layer_combo.currentText()
+        current_base_id = self.base_layer_combo.currentData()
         self.base_layer_combo.blockSignals(True)
         self.base_layer_combo.clear()
-        self.base_layer_combo.addItem("None")
-        self.base_layer_combo.addItems(layers)
-        if current_base in layers or current_base == "None":
-            self.base_layer_combo.setCurrentText(current_base)
+        self.base_layer_combo.addItem("No shared background", None)
+        for layer in layers:
+            self.base_layer_combo.addItem(layer.name(), layer.id())
+        current_base_index = self.base_layer_combo.findData(current_base_id)
+        if current_base_index >= 0:
+            self.base_layer_combo.setCurrentIndex(current_base_index)
         self.base_layer_combo.blockSignals(False)
 
         # Update panel combos
         for panel in self.panels:
-            current_layer = panel.layer_combo.currentText()
+            current_layer_id = panel.layer_combo.currentData()
             panel.layer_combo.blockSignals(True)
             panel.layer_combo.clear()
-            panel.layer_combo.addItems(layers)
-            if current_layer in layers:
-                panel.layer_combo.setCurrentText(current_layer)
+            for layer in layers:
+                panel.layer_combo.addItem(layer.name(), layer.id())
+            current_layer_index = panel.layer_combo.findData(current_layer_id)
+            if current_layer_index >= 0:
+                panel.layer_combo.setCurrentIndex(current_layer_index)
             panel.layer_combo.blockSignals(False)
+
+    def _ordered_spatial_layers(self) -> list[QgsMapLayer]:
+        """Return unique spatial layers, prioritizing the main canvas order."""
+        project = QgsProject.instance()
+        ordered = list(self.iface.mapCanvas().layers())
+        ordered.extend(project.layerTreeRoot().layerOrder())
+        ordered.extend(project.mapLayers().values())
+
+        base_layer = self.get_global_base_layer()
+        base_id = base_layer.id() if base_layer else None
+        unique_layers = []
+        seen_ids = set()
+        for layer in ordered:
+            if not layer or layer.id() in seen_ids or layer.id() == base_id:
+                continue
+            seen_ids.add(layer.id())
+            if layer.isValid() and layer.isSpatial():
+                unique_layers.append(layer)
+        return unique_layers
+
+    def _layer_intersects_main_extent(self, layer: QgsMapLayer) -> bool:
+        """Return whether a layer's declared extent overlaps the QGIS canvas."""
+        main_canvas = self.iface.mapCanvas()
+        canvas_extent = main_canvas.extent()
+        canvas_crs = main_canvas.mapSettings().destinationCrs()
+        layer_extent = layer.extent()
+        layer_crs = layer.crs()
+
+        try:
+            if layer_crs.isValid() and canvas_crs.isValid() and layer_crs != canvas_crs:
+                transform = QgsCoordinateTransform(layer_crs, canvas_crs, QgsProject.instance())
+                layer_extent = transform.transformBoundingBox(layer_extent)
+        except (QgsCsException, RuntimeError):
+            return False
+        return layer_extent.intersects(canvas_extent)
+
+    def auto_fill_from_current_extent(self) -> None:
+        """Assign a different extent-relevant layer to each current panel."""
+        if not self.panels:
+            return
+
+        all_layers = self._ordered_spatial_layers()
+        intersecting = [
+            layer for layer in all_layers
+            if self._layer_intersects_main_extent(layer)
+        ]
+        intersecting_ids = {layer.id() for layer in intersecting}
+        remaining = [layer for layer in all_layers if layer.id() not in intersecting_ids]
+        candidates = intersecting + remaining
+        selected = candidates[:len(self.panels)]
+
+        if not selected:
+            QMessageBox.information(
+                self,
+                "Choose Layers for Me",
+                "No spatial project layers are available. Add map layers, then try again.",
+            )
+            return
+
+        for panel, layer in zip(self.panels, selected):
+            panel.set_comparison_layer(layer)
+
+        # If there are fewer project layers than panels, keep unused panels in
+        # follow-main mode instead of duplicating a layer and implying a comparison.
+        for panel in self.panels[len(selected):]:
+            panel.mode_combo.setCurrentText("Follow Main Map")
+
+        used_from_extent = min(len(intersecting), len(selected))
+        if len(selected) == len(self.panels):
+            if used_from_extent == len(selected):
+                message = (
+                    f"Ready: {len(selected)} panels now show different layers "
+                    "from the current map extent."
+                )
+            else:
+                message = (
+                    f"Ready: {len(selected)} different layers assigned; "
+                    f"{used_from_extent} intersect the current map extent."
+                )
+        else:
+            message = (
+                f"Assigned {len(selected)} different layers to {len(self.panels)} panels. "
+                "Add more spatial layers to fill every panel uniquely."
+            )
+        self.status_label.setText(message)
+        self.workflow_hint.setText(
+            "<b>Comparison ready:</b> each filled panel is isolated to one "
+            "layer. Change any panel's layer dropdown to fine-tune the set."
+        )
 
     def populate_theme_combos(self) -> None:
         """Fills the Map Theme Selector in all panels."""
@@ -625,12 +800,12 @@ class MultiMapDialog(QDialog):
             panel.theme_combo.blockSignals(False)
 
     def sync_all_panel_layers(self) -> None:
-        """Force updates map canvases that are in 'Sync Main Map' mode."""
+        """Update every panel after the QGIS main-canvas layers change."""
         for panel in self.panels:
             panel.update_canvas_layers()
 
     def refresh_layer_panels(self) -> None:
-        """Triggered when global base layer changes. Updates panels in focus layer mode."""
+        """Update one-layer comparison panels after the background changes."""
         for panel in self.panels:
             if panel.mode == "layer":
                 panel.update_canvas_layers()
@@ -845,11 +1020,11 @@ class MultiMapDialog(QDialog):
 
 
 class QuickGuideDialog(QDialog):
-    """A stylish dialog displaying the quick help guide for 02-Multimap."""
+    """A stylish dialog displaying the quick help guide for 02Multimap."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("02-Multimap Workspace Guide")
+        self.setWindowTitle("02Multimap Workspace Guide")
         self.resize(580, 500)
 
         # Apply the Slate-Teal design system styling to the Help dialog
@@ -889,39 +1064,68 @@ class QuickGuideDialog(QDialog):
 
         html_help = """
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-            <h2 style="color: #16323f; font-weight: 700; border-bottom: 2px solid #2a8f85; padding-bottom: 6px; margin-top: 0;">
-                02-Multimap Workspace Guide
+            <h2 style="color: #16323f; font-weight: 700; border-bottom: 2px solid #2a8f85;
+                       padding-bottom: 6px; margin-top: 0;">
+                02Multimap Workspace Guide
             </h2>
-            <p>Welcome to <b>02-Multimap</b>, a multi-panel synchronized comparison studio.
+            <p>Welcome to <b>02Multimap</b>, a multi-panel synchronized comparison studio.
             This workspace enables side-by-side analysis with coordinate tracking and printing layouts.</p>
 
-            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">1. Workspace Panel Layouts</h3>
-            <p>Use the <b>Layout</b> dropdown to choose your grid format. You can snap 2, 3, 4, 6, or 8 map viewports side-by-side.
-            You can interactively drag and resize panel borders using standard split dividers (splitters).</p>
+            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">
+                1. Fast Layer Comparison
+            </h3>
+            <p>Choose 2, 3, 4, 6, or 8 panels, then click <b>Choose for Me · Current Extent</b>.
+            The plugin chooses a different spatial layer for every panel, prioritizing layers that
+            overlap the current QGIS map extent.</p>
+            <p>For example, with the 4-panel layout the button creates
+            <b>four different one-layer map views</b> automatically.
+            You can then fine-tune any result with the layer dropdown in that panel.</p>
 
-            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">2. Synchronizing Map Navigation</h3>
+            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">
+                2. Synchronizing Map Navigation
+            </h3>
             <ul>
-                <li><b>Sync Extents:</b> Zooming or panning in any map viewport will automatically update the center and zoom scale of all other viewports.</li>
-                <li><b>Sync with QGIS Canvas:</b> Navigation updates are also bi-directionally linked to QGIS's main map window.</li>
-                <li><b>Manual Alignment:</b> When sync is off, click <b>Match Scale</b> to match zoom levels or <b>Match Extent</b> to copy both scale and center coordinates.</li>
+                <li><b>Sync Navigation:</b> Zooming or panning in any map viewport will automatically
+                update the center and zoom scale of all other viewports.</li>
+                <li><b>Sync with QGIS Canvas:</b> Navigation updates are also bi-directionally linked
+                to QGIS's main map window.</li>
+                <li><b>Manual Alignment:</b> When sync is off, click <b>Match Scale</b> to match zoom
+                levels or <b>Match Extent</b> to copy both scale and center coordinates.</li>
             </ul>
 
-            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">3. Coordinated Laser Cursor</h3>
-            <p>Move your mouse over any map panel. A red tracking circle (laser pointer) will reflect the exact coordinate across all other active viewports and the main QGIS canvas, making spatial cross-examination simple.</p>
+            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">
+                3. Coordinated Laser Cursor
+            </h3>
+            <p>Move your mouse over any map panel. A red tracking circle (laser pointer) will reflect
+            the exact coordinate across all other active viewports and the main QGIS canvas, making
+            spatial cross-examination simple.</p>
 
-            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">4. Panel Render Modes</h3>
+            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">
+                4. Panel Render Modes
+            </h3>
             <p>Configure each panel individually using the dropdown header inside the viewport card:</p>
             <ul>
-                <li><b>Sync Main Map:</b> Automatically reflects whatever layers are visible in the main QGIS Legend Layer Tree.</li>
-                <li><b>Focus Layer:</b> Locks a single target layer on top of a globally-defined base map layer. Useful for categorical layer comparisons.</li>
-                <li><b>Map Theme:</b> Locks the canvas render settings to follow a specific QGIS Map Theme style preset.</li>
+                <li><b>Follow Main Map:</b> Reflects the layers visible in the main QGIS map canvas.</li>
+                <li><b>Compare One Layer:</b> Isolates one target layer in this panel. Select a
+                different layer in every panel to build a comparison grid. The optional shared
+                background is added beneath it.</li>
+                <li><b>Use Map Theme:</b> Follows a specific QGIS Map Theme style preset.</li>
             </ul>
 
-            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">5. Advanced Print Exporter</h3>
-            <p>Click <b>Print Layout...</b> to generate vector map layout sheets. You can define a title, select from 5 Scalebar styles, choose from 5 North Arrow graphics, and save to high-resolution PNG, JPEG, SVG, or PDF formats.</p>
+            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">
+                5. Advanced Print Exporter
+            </h3>
+            <p>Click <b>Export / Print...</b> to generate map layout sheets. You can define a title,
+            select from 5 Scalebar styles, choose from 5 North Arrow graphics, and save to
+            high-resolution PNG, JPEG, SVG, or PDF formats.</p>
 
-            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">6. Interactive HTML Dashboard</h3>
-            <p>In the print exporter, select <b>Interactive HTML (*.html)</b> format to generate a self-contained Leaflet.js dashboard web page containing your vector geometries, base tilemaps, extent synchronization, and synchronized laser tracking.</p>
+            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">
+                6. Interactive HTML Dashboard
+            </h3>
+            <p>Select <b>Interactive HTML (*.html)</b> to create one self-contained file that works
+            offline. It preserves each panel's QGIS rendering—including vector styles, labels,
+            raster layers, and map themes—and includes synchronized pan/zoom controls,
+            coordinates, and laser tracking.</p>
         </div>
         """
         self.browser.setHtml(html_help)

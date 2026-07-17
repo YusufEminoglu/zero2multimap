@@ -1,6 +1,6 @@
-# Roadmap & Future Features — 02-Multimap
+# Roadmap & Future Features — 02Multimap
 
-This document outlines planned improvements, future feature additions, and technical milestones for **02-Multimap: Sync-up Multimaps**, aligning it with the wider **PlanX / 02viz** urban analytics ecosystem.
+This document outlines planned improvements, future feature additions, and technical milestones for **02Multimap: Sync-up Map Layers**, aligning it with the wider **PlanX / 02viz** urban analytics ecosystem.
 
 ---
 
@@ -8,10 +8,11 @@ This document outlines planned improvements, future feature additions, and techn
 
 ```mermaid
 timeline
-    title 02-Multimap Release Milestones
-    v0.1.x (Current) : Core Multi-Panel Sync : Resizable Grid Splitters : Print Exporter : Interactive Leaflet HTML Exporter
-    v0.2.x (Short-term) : Temporal Time-Series Sync : Minimap / Overview Indicators : Premium HTML Dashboard Themes (Dark Mode)
-    v0.3.x (Medium-term) : 3D Map Viewport Synchronization : Dynamic Legend Bindings : Raster Band/Stretch Syncing
+    title 02Multimap Release Milestones
+    v0.1.x : Core Multi-Panel Sync : Resizable Grid Splitters : Print Exporter
+    v0.2.x (Current) : Extent-aware Panel Auto-Fill : Clear One-Layer Comparison UX : Offline Exact-Render HTML Dashboard
+    v0.3.x (Short-term) : Temporal Time-Series Sync : Minimap / Overview Indicators : Premium HTML Dashboard Themes (Dark Mode)
+    v0.4.x (Medium-term) : 3D Map Viewport Synchronization : Dynamic Legend Bindings : Raster Band/Stretch Syncing
     v1.0.x (Long-term) : Web Hosting Integration (GitHub Pages) : Bivariate/LISA Side-by-Side Visualizations
 ```
 

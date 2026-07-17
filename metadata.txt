@@ -1,23 +1,24 @@
 [general]
-name=02-Multimap: Sync-up Multimaps
+name=02Multimap: Sync-up Map Layers
 qgisMinimumVersion=3.40
 qgisMaximumVersion=4.99
-description=Multi-panel synchronized map canvases with laser pointer cursor tracking and layout exports.
-version=0.1.5
+description=Smart multi-panel layer comparison with synchronized canvases, laser tracking, and offline HTML exports.
+version=0.2.0
 author=Yusuf Eminoglu
 email=yusuf.eminoglu@deu.edu.tr
 
-about=02-Multimap is an advanced, high-performance workspace plugin designed for comparative spatial analysis and multi-scenario map visualization. Ideal for urban planners, environmental researchers, and demographers, it allows you to compare multiple spatial patterns side-by-side in a coordinated layout.
+about=02Multimap is an advanced, high-performance workspace plugin designed for comparative spatial analysis and multi-scenario map visualization. Ideal for urban planners, environmental researchers, and demographers, it allows you to compare multiple spatial patterns side-by-side in a coordinated layout.
     
     Key Capabilities:
     1. Synchronized Viewport Grids: Rebuild your workspace into 2, 3, 4, 6, or 8 synchronized map canvases (in horizontal, vertical, or grid matrices).
     2. Dynamic Spacing Splitters: Interactively drag and resize panel borders using smooth split sliders to focus on specific viewports.
     3. Bi-directional Syncing: Automatically coordinate map navigation, zoom, and panning across all panels, optionally synced with the main QGIS canvas.
     4. Synchronized Laser Cursor: Track coordinates across all canvases simultaneously with custom colored crosshairs following your mouse movement.
-    5. Flexible Rendering Modes: Let each canvas display your active map, track dedicated project Map Themes, or isolate unique vector Focus Layers on top of a global base layer.
+    5. Clear Comparison Modes: Let each canvas follow the main map, use a project Map Theme, or compare one isolated layer on top of an optional shared background.
     6. Manual Scale Alignments: Match map scales or spatial extents with single-click buttons when automated syncing is disabled.
     7. Professional Print layouts: Add titles, 5 Scalebar options, and 5 North Arrow graphics, exporting the grid matrix directly to PDF, SVG, PNG, or JPEG.
-    8. Interactive HTML Dashboards: Export the comparative layout as a self-contained Leaflet.js web page complete with reprojected vector layer features, basemaps, and synchronized laser tracking.
+    8. Offline HTML Dashboards: Export the exact QGIS rendering of every panel—including labels, vector styles, rasters, and themes—to one self-contained HTML file with synchronized pan, zoom, coordinates, and laser tracking.
+    9. Smart Auto-Fill: Choose a grid size and automatically assign a different layer to every panel, prioritizing layers that intersect the current QGIS map extent.
 
 tracker=https://github.com/YusufEminoglu/zero2multimap/issues
 repository=https://github.com/YusufEminoglu/zero2multimap
@@ -33,5 +34,6 @@ hasProcessingProvider=no
 license=GPL-3
 
 changelog=
-    02-Multimap 0.1.5 - removed the shared top-level QGIS menu entry (toolbar icon only) and added a remembered export folder for the print/HTML layout exporter.
-    02-Multimap 0.1.3 - minor revision: replaced the plugin icon with a modern, high-contrast vector style icon compatible with light/dark themes.
+    02Multimap 0.2.0 - added extent-aware Choose for Me panel assignment, redesigned one-layer comparison guidance, and replaced the network-dependent HTML exporter with an offline, exact-render dashboard verified on QGIS 3.40 LTR and QGIS 4.
+    02Multimap 0.1.5 - removed the shared top-level QGIS menu entry (toolbar icon only) and added a remembered export folder for the print/HTML layout exporter.
+    02Multimap 0.1.3 - minor revision: replaced the plugin icon with a modern, high-contrast vector style icon compatible with light/dark themes.

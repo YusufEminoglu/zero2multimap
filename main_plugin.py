@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""02-Multimap — main plugin class.
+"""02Multimap — main plugin class.
 
 Toolbar-only integration: a single launch icon, no top-level QGIS menu.
 """
@@ -25,7 +25,7 @@ class O2MultiMapPlugin:
     def initGui(self) -> None:
         self.action = QAction(
             QIcon(self.icon_path),
-            "02-Multimap Workspace",
+            "02Multimap Workspace",
             self.iface.mainWindow()
         )
         self.action.setStatusTip("Open multi-panel synchronized map viewer workspace.")

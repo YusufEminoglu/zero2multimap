@@ -1,4 +1,4 @@
-"""QGIS plugin entry point for 02-Multimap: Sync-up Multimaps plugin."""
+"""QGIS plugin entry point for 02Multimap: Sync-up Map Layers plugin."""
 from .main_plugin import O2MultiMapPlugin
 
 
