@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.3] - 2026-08-07
+
+- Added online user manual link (https://yusufeminoglu.github.io/zero2multimap/) and GitHub repository star call-to-action.
+
 ## [0.2.2] - 2026-08-07
 
 - Add floating Save as PDF button to reference manual

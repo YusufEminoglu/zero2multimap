@@ -3,11 +3,11 @@ name=02Multimap: Sync-up Map Layers
 qgisMinimumVersion=3.40
 qgisMaximumVersion=4.99
 description=Smart multi-panel layer comparison with synchronized canvases, laser tracking, and offline HTML exports.
-version=0.2.2
+version=0.2.3
 author=Yusuf Eminoglu
 email=yusuf.eminoglu@deu.edu.tr
 
-about=02Multimap is an advanced, high-performance workspace plugin designed for comparative spatial analysis and multi-scenario map visualization. Ideal for urban planners, environmental researchers, and demographers, it allows you to compare multiple spatial patterns side-by-side in a coordinated layout.
+about=02Multimap is an advanced, high-performance workspace plugin designed for comparative spatial analysis and multi-scenario map visualization. Ideal for urban planners, environmental researchers, and demographers, it allows you to compare multiple spatial patterns side-by-side in a coordinated layout. Online User Manual & Documentation: https://yusufeminoglu.github.io/zero2multimap/ | If you find this plugin helpful, please consider starring the repository on GitHub (https://github.com/YusufEminoglu/zero2multimap)!
     
     Key Capabilities:
     1. Synchronized Viewport Grids: Rebuild your workspace into 2, 3, 4, 6, or 8 synchronized map canvases (in horizontal, vertical, or grid matrices).
@@ -22,7 +22,7 @@ about=02Multimap is an advanced, high-performance workspace plugin designed for 
 
 tracker=https://github.com/YusufEminoglu/zero2multimap/issues
 repository=https://github.com/YusufEminoglu/zero2multimap
-homepage=https://github.com/YusufEminoglu/zero2multimap
+homepage=https://yusufeminoglu.github.io/zero2multimap/
 
 category=Vector
 tags=02-multimap,zero2multimap,qgis,dialog,multi-map,comparison,sync,demographics
