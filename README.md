@@ -17,6 +17,11 @@
 
 ---
 
+## 📖 Documentation
+
+**[Comprehensive Academic Reference Manual](https://yusufeminoglu.github.io/zero2multimap/)** — complete documentation of every feature, parameter, and workflow. Hosted on GitHub Pages.
+
+
 ## Why 02Multimap?
 
 Urban planners, environmental scientists, and demographers often need to compare multiple spatial patterns side-by-side: historical urban growth, demographic variations (e.g., age groups, income levels), hazard risks (flood zones vs. landslide vulnerabilities), or temporal policy variations. 
