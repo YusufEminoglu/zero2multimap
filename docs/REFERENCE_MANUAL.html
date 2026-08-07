@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>02Multimap &mdash; Reference Manual</title>
+<style>
+:root {--bg:#fafaf8;--sidebar-bg:#f3f3f0;--text:#1a1a1a;--muted:#5a5a55;--accent:#2a6e5e;--border:#d8d5ce;--card-bg:#fff;--link:#1a6e5e;--code-bg:#edf4f2;--search-bg:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Segoe UI",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;display:flex;min-height:100vh}
+#sidebar{width:270px;min-width:270px;background:var(--sidebar-bg);border-right:1px solid var(--border);padding:24px 20px;position:sticky;top:0;height:100vh;overflow-y:auto}
+#sidebar h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px}
+#search{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--search-bg);margin-bottom:20px}
+#sidebar nav a{display:block;padding:5px 0;font-size:13px;color:var(--link);text-decoration:none}
+#sidebar nav a:hover{text-decoration:underline}
+#sidebar nav a.sub{padding-left:14px;font-size:12px}
+#main{flex:1;padding:40px 48px;max-width:860px}
+h1{font-size:28px;font-weight:700;color:var(--accent);margin-bottom:4px}
+h1+p{color:var(--muted);margin-bottom:32px}
+h2{font-size:20px;font-weight:600;color:var(--accent);margin:36px 0 12px;padding-bottom:6px;border-bottom:2px solid var(--border)}
+h3{font-size:16px;font-weight:600;color:var(--text);margin:20px 0 8px}
+p,li{font-size:14px;color:var(--text)}
+p{margin-bottom:10px}
+.card{background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:14px}
+.card h4{font-size:14px;font-weight:600;color:var(--accent);margin-bottom:6px}
+ul{margin:4px 0 10px 20px}
+li{margin-bottom:3px}
+code{font-family:Consolas,'Courier New',monospace;background:var(--code-bg);padding:1px 6px;border-radius:3px;font-size:13px}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+th,td{border:1px solid var(--border);padding:8px 12px;text-align:left}
+th{background:var(--code-bg);font-weight:600}
+.refs{font-size:12px;color:var(--muted)}
+.refs a{color:var(--link)}
+@media(max-width:760px){body{flex-direction:column}#sidebar{width:100%;min-width:auto;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border)}#main{padding:24px}}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<aside id="sidebar">
+  <input type="text" id="search" placeholder="Search manual&hellip;" autocomplete="off">
+  <h2>Contents</h2>
+  <nav id="toc">
+    <a href="#overview">Overview</a>
+    <a href="#features" class="sub">Features</a>
+    <a href="#modes" class="sub">Render Modes</a>
+    <a href="#export" class="sub">Export</a>
+    <a href="#params" class="sub">Controls</a>
+    <a href="#workflow" class="sub">Workflow</a>
+    <a href="#technical" class="sub">Technical Notes</a>
+    <a href="#literature">Literature</a>
+  </nav>
+</aside>
+<main id="main">
+<h1>02Multimap</h1>
+<p>Multi-panel synchronised map canvases for comparative spatial analysis &bull; v0.2.0</p>
+
+<h2 id="overview">1. Overview</h2>
+<p>02Multimap is a QGIS workspace plugin that creates a multi-panel synchronised map viewer. It provides 2, 3, 4, 6, or 8 independent map canvases in a coordinated grid layout, with real-time navigation syncing, a laser crosshair cursor tracking across all panels, three per-panel render modes, print layout export, and an offline self-contained HTML dashboard export. It targets urban planners, environmental scientists, and demographers who need to compare spatial patterns side-by-side. The plugin is toolbar-only (no QGIS menu entry), has zero external Python dependencies, and is compatible with PyQt5 and PyQt6 via qgis.PyQt compatibility APIs.</p>
+
+<h2 id="features">2. Feature Documentation</h2>
+
+<h3>2.1 Dynamic Layout Grids</h3>
+<div class="card">
+  <h4>Six Panel Configurations</h4>
+  <p>A combobox offers 2 Panels (1&times;2), 2 Panels (2&times;1), 3 Panels (1&times;3), 4 Panels (2&times;2), 6 Panels (2&times;3), and 8 Panels (2&times;4). Single-row layouts use a single horizontal <code>QSplitter</code>; multi-row layouts nest two horizontal splitters inside a vertical splitter, initialised with equal sizing. Changing the grid destroys and recreates all panels, each inheriting the main canvas CRS and extent.</p>
+</div>
+
+<h3>2.2 Bi-Directional Navigation Sync</h3>
+<div class="card">
+  <h4>Synchronised Panning and Zooming</h4>
+  <p><strong>Sync Navigation</strong> (default on): When any panel's extent changes, all other panels copy that extent. An internal <code>_is_syncing</code> boolean lock prevents cascade loops.</p>
+  <p><strong>Sync with QGIS Canvas</strong> (default on): Panel extents push to the main QGIS canvas and vice versa. Both checkboxes must be on for main-canvas-to-panel propagation.</p>
+</div>
+
+<h3>2.3 Laser Crosshair Tracking</h3>
+<div class="card">
+  <h4>Coordinated Cursor Across All Views</h4>
+  <p>When moving the mouse over any panel, a green neon <code>QgsVertexMarker</code> (cross, 24 px) appears at the matching geographic coordinate on all other panels. A red marker appears on the main QGIS canvas. Coordinates display in a status bar readout. The markers hide when the mouse leaves the panel. Toggleable via the Laser Crosshair checkbox.</p>
+</div>
+
+<h3>2.4 Smart Auto-Fill</h3>
+<div class="card">
+  <h4>"Choose for Me &mdash; Current Extent"</h4>
+  <p>The teal-accented auto-fill button automatically assigns a different spatial layer to each panel. The algorithm collects all valid spatial layers from the project, orders them by canvas layer order, splits into two groups (layers intersecting the current canvas extent prioritised), and assigns the first N=panels layers. Remaining panels are set to "Follow Main Map". CRS-aware: transforms layer bounding boxes to canvas CRS before intersection testing.</p>
+</div>
+
+<h3>2.5 Manual Alignment Buttons</h3>
+<div class="card">
+  <h4>Scale, Extent, and Full-Extent Alignment</h4>
+  <ul>
+    <li><strong>Match Scale:</strong> Copies the active panel's zoom scale to all panels, preserving each centre.</li>
+    <li><strong>Match Extent:</strong> Copies the active panel's full extent (centre + scale) to all panels.</li>
+    <li><strong>Fit All Panels:</strong> Calls <code>zoomToFullExtent()</code> on every panel.</li>
+  </ul>
+</div>
+
+<h2 id="modes">3. Panel Render Modes</h2>
+<p>Each panel has a per-panel mode combobox with three options:</p>
+<table>
+  <tr><th>Mode</th><th>Behaviour</th></tr>
+  <tr><td><strong>Follow Main Map</strong></td><td>Copies layers directly from the main QGIS canvas</td></tr>
+  <tr><td><strong>Compare One Layer</strong></td><td>Shows one selected layer from the panel's layer combo, optionally stacked above a shared global background layer (from the top toolbar's base layer combo)</td></tr>
+  <tr><td><strong>Use Map Theme</strong></td><td>Applies a QGIS Map Theme's visible layers via <code>mapThemeCollection().mapThemeVisibleLayers()</code></td></tr>
+</table>
+
+<h2 id="export">4. Print Layout and HTML Dashboard Export</h2>
+<div class="card">
+  <h4>Print Layout Export</h4>
+  <p>Opens a configuration dialog for: map title (free text), page size (A4/A3/Letter), orientation (Landscape/Portrait), north arrow style (5 options from QGIS built-in SVG arrows), scalebar style (5 options), and export format (PNG, JPEG, PDF, SVG, or Interactive HTML Dashboard). Builds an in-memory <code>QgsLayout</code> with a title label, grid of <code>QgsLayoutItemMap</code> items, north arrow, and scalebar. Exports via <code>QgsLayoutExporter</code>.</p>
+</div>
+<div class="card">
+  <h4>Offline HTML Dashboard</h4>
+  <p>When "Interactive HTML Dashboard" is selected, the export pipeline renders each panel's canvas to PNG at up to 2&times; resolution (capped at 1600&times;1200 px) and assembles a single self-contained HTML file with: CSS + vanilla JavaScript (zero external dependencies), grid layout matching the plugin's row/col configuration, synchronised pan via pointer events, synchronised wheel zoom (anchor-based, scale 1&times;&ndash;12&times;), double-click reset to 1&times;, laser cursor tracking via <code>pointermove</code> across all panels, coordinate readout with CRS label, and single-column responsive collapse below 760 px. XSS-safe: HTML-escapes titles, JSON-encodes panel data with <code>&lt;/</code> sanitisation via Unicode escaping.</p>
+</div>
+
+<h2 id="params">5. Controls Summary</h2>
+<table>
+  <tr><th>Control</th><th>Type</th><th>Description</th></tr>
+  <tr><td>Panels</td><td>Combo</td><td>6 grid configurations (2/3/4/6/8 panels)</td></tr>
+  <tr><td>Sync Navigation</td><td>QCheckBox (default on)</td><td>Bi-directional pan/zoom sync between panels</td></tr>
+  <tr><td>Sync with QGIS Canvas</td><td>QCheckBox (default on)</td><td>Two-way sync between panels and main canvas</td></tr>
+  <tr><td>Laser Crosshair</td><td>QCheckBox (default on)</td><td>Coordinated cursor marker across all views</td></tr>
+  <tr><td>Optional background</td><td>QgsMapLayerComboBox</td><td>Global base layer for Compare One Layer panels</td></tr>
+  <tr><td>Choose for Me</td><td>QPushButton</td><td>Auto-assigns layers to panels from current extent</td></tr>
+  <tr><td>Match Scale / Extent / Fit All</td><td>QPushButton (3)</td><td>Manual alignment between panels</td></tr>
+  <tr><td>Refresh / Export / Quick Guide</td><td>QPushButton (3)</td><td>Canvas refresh, print layout, help dialog</td></tr>
+</table>
+
+<h2 id="workflow">6. Workflow Guide</h2>
+<ol>
+  <li>Load several spatial layers into a QGIS project and set up at least one map theme (optional, for theme-mode panels).</li>
+  <li>Click the 02Multimap toolbar icon to open the floating dialog.</li>
+  <li>Choose a panel count from the combobox (e.g., 4 Panels 2&times;2).</li>
+  <li>Optionally click <em>Choose for Me</em> to auto-assign layers intersecting the current extent.</li>
+  <li>Set each panel's mode: Follow Main Map, Compare One Layer (pick a layer from the combo), or Use Map Theme.</li>
+  <li>Optionally select a global background layer from the top toolbar.</li>
+  <li>Toggle Sync Navigation, canvas sync, and laser crosshair as needed.</li>
+  <li>Pan and zoom in any panel; all others follow. The laser crosshair tracks cursor position across all views.</li>
+  <li>Use Match Scale/Match Extent/Fit All for alignment. Export to print layout or HTML dashboard for sharing.</li>
+</ol>
+
+<h2 id="technical">7. Technical Notes</h2>
+<ul>
+  <li><strong>Layer identification:</strong> Layer combos store data by stable QGIS layer ID to avoid problems with duplicate layer names.</li>
+  <li><strong>Project signal integration:</strong> The dialog connects to <code>layerWasAdded</code>, <code>layerRemoved</code>, <code>mapThemeCollection().mapThemesChanged</code>, <code>iface.mapCanvas().layersChanged</code>, and <code>extentsChanged</code> to stay in sync with the project state.</li>
+  <li><strong>PyQt5/PyQt6 compatibility:</strong> 8 patterns for dynamic attribute access on enums (<code>Qt.WindowType</code>, <code>QEvent.Type</code>, <code>Qt.AlignmentFlag</code>, <code>QFont.Weight</code>, <code>QIODevice.OpenModeFlag</code>, <code>Qt.Orientation</code>, <code>QFrame.Shape</code>/<code>Shadow</code>) and event position extraction.</li>
+  <li><strong>Print layout fidelity:</strong> Theme-mode panels use <code>setFollowVisibilityPresetName()</code> / <code>setFollowVisibilityPreset(True)</code> for accuracy. Layer-mode panels use <code>layerStyleOverrides()</code>.</li>
+  <li><strong>Atomic file writes:</strong> HTML export uses <code>QSaveFile</code> for safe atomic commit.</li>
+  <li><strong>QGIS compatibility:</strong> 3.40 LTR through 4.x. Zero external Python dependencies.</li>
+</ul>
+
+<h2 id="literature">8. Literature</h2>
+<ol class="refs">
+  <li>Roberts, J. C. (2007). State of the art: Coordinated &amp; multiple views in exploratory visualization. <em>Proceedings of the Fifth International Conference on Coordinated and Multiple Views in Exploratory Visualization</em>, 61&ndash;71. <a href="https://doi.org/10.1109/CMV.2007.20">DOI: 10.1109/CMV.2007.20</a></li>
+  <li>Dykes, J., MacEachren, A. M., &amp; Kraak, M. J. (Eds.). (2005). <em>Exploring Geovisualization</em>. Elsevier.</li>
+  <li>Elmqvist, N. &amp; Tsigas, P. (2008). A taxonomy of 3D occlusion management for visualization. <em>IEEE Transactions on Visualization and Computer Graphics</em>, 14(5), 1095&ndash;1109. <a href="https://doi.org/10.1109/TVCG.2008.59">DOI: 10.1109/TVCG.2008.59</a></li>
+  <li>Andrienko, G., Andrienko, N., Dykes, J., Fabrikant, S. I., &amp; Wachowicz, M. (2008). Geovisualization of dynamics, movement and change: key issues and developing approaches. <em>The Cartographic Journal</em>, 45(3), 185&ndash;200. <a href="https://doi.org/10.1179/000870408X311428">DOI: 10.1179/000870408X311428</a></li>
+</ol>
+</main>
+<script>
+(function(){
+  var inp=document.getElementById('search');
+  var main=document.getElementById('main');
+  if(!inp||!main)return;
+  var all=main.querySelectorAll('h2,h3,p,li,td');
+  inp.addEventListener('input',function(){
+    var q=inp.value.trim().toLowerCase();
+    all.forEach(function(el){el.classList.remove('hidden');});
+    if(!q)return;
+    var sections=main.querySelectorAll('h2');
+    sections.forEach(function(h){
+      var next=h.nextElementSibling;
+      var keep=h.textContent.toLowerCase().indexOf(q)!==-1;
+      while(next && next.tagName!=='H2'){
+        if(next.textContent.toLowerCase().indexOf(q)!==-1)keep=true;
+        next=next.nextElementSibling;
+      }
+      if(!keep){
+        next=h.nextElementSibling;
+        while(next && next.tagName!=='H2'){next.classList.add('hidden');next=next.nextElementSibling;}
+        h.classList.add('hidden');
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>
