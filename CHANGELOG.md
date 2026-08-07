@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.1] - 2026-08-07
+
+- Add comprehensive academic reference manual
+
 All notable changes to **02Multimap** are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · versioning: [SemVer](https://semver.org/).
 

@@ -3,7 +3,7 @@ name=02Multimap: Sync-up Map Layers
 qgisMinimumVersion=3.40
 qgisMaximumVersion=4.99
 description=Smart multi-panel layer comparison with synchronized canvases, laser tracking, and offline HTML exports.
-version=0.2.0
+version=0.2.1
 author=Yusuf Eminoglu
 email=yusuf.eminoglu@deu.edu.tr
 
