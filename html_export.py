@@ -14,6 +14,8 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="02Multimap">
     <title>__TITLE__</title>
+
+
     <style>
         :root {
             color-scheme: light dark;
@@ -215,17 +217,20 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             inset: 0;
             width: 100%;
             height: 100%;
-            object-fit: fill;
+            object-fit: contain;
+            object-position: center;
             pointer-events: none;
             transform-origin: 0 0;
             user-select: none;
             -webkit-user-drag: none;
             transition: opacity 0.15s ease;
         }
+
         .mini-legend {
             position: absolute;
-            bottom: 8px;
-            left: 8px;
+            bottom: 6px;
+            left: 6px;
+
             z-index: 4;
             max-width: 220px;
             max-height: 140px;
@@ -697,7 +702,9 @@ def build_dashboard_html(
             "        </section>"
         )
 
-        script_data.append({"extent": extent, "crs": crs})
+        extent_wgs84_val = panel.get("extent_wgs84", extent)
+        script_data.append({"extent": extent, "extent_wgs84": extent_wgs84_val, "crs": crs})
+
 
     content = _DASHBOARD_TEMPLATE
     content = content.replace("__INITIAL_THEME__", safe_theme)

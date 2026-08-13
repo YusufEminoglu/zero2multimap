@@ -406,8 +406,11 @@ class MapPanelWidget(QFrame):
                 border-radius: 5px;
             }
         """)
-        self.legend_card.move(10, max(10, self.canvas.height() - 110))
+        self.legend_card.adjustSize()
+        card_h = self.legend_card.sizeHint().height() or 50
+        self.legend_card.move(6, max(6, self.canvas.height() - card_h - 6))
         self.legend_card.show()
+
 
     def _show_opacity_menu(self) -> None:
         """Open a small popup menu with a layer opacity slider."""
@@ -505,9 +508,15 @@ class MapPanelWidget(QFrame):
         self.kpi_bar.setText(f"KPIs: {area_str} · {total_features:,} features in extent")
         self.kpi_bar.setVisible(True)
 
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        if hasattr(self, "legend_card") and self.legend_card and self.legend_card.isVisible():
+            card_h = self.legend_card.sizeHint().height() or 50
+            self.legend_card.move(6, max(6, self.canvas.height() - card_h - 6))
 
 
 class MultiMapDialog(QDialog):
+
     """The main floating window that manages the grid of map panels and coordinate syncing."""
 
     def __init__(self, iface, parent=None):
