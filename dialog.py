@@ -605,24 +605,14 @@ class MultiMapDialog(QDialog):
         self.preset_combo.currentTextChanged.connect(self._on_preset_selected)
         setup_row.addWidget(self.preset_combo)
 
-        self.drawer_btn = QPushButton("📋 Legend Drawer")
-        self.drawer_btn.setToolTip("Toggle right-side drawer stacking all panel micro-legends in one column.")
-        self.drawer_btn.clicked.connect(self.toggle_legend_drawer)
-        setup_row.addWidget(self.drawer_btn)
-
-        self.player_btn = QPushButton("▶ Play Timeline")
-        self.player_btn.setToolTip("Auto-cycle active panel focus or cross-fade timeline layers.")
-        self.player_btn.clicked.connect(self.toggle_timeline_player)
-        setup_row.addWidget(self.player_btn)
-
         setup_row.addStretch(1)
-
 
         self.refresh_btn = QPushButton("Refresh")
         self.refresh_btn.clicked.connect(self.refresh_all_canvases)
         setup_row.addWidget(self.refresh_btn)
 
         self.print_btn = QPushButton("Export / Print…")
+        self.print_btn.setObjectName("PrimaryAction")
         self.print_btn.clicked.connect(self.show_print_layout)
         self.print_btn.setToolTip(
             "Export a print layout or a self-contained interactive HTML dashboard."
@@ -638,13 +628,13 @@ class MultiMapDialog(QDialog):
         toolbar_layout.addLayout(setup_row)
 
         navigation_row = QHBoxLayout()
-        navigation_row.setSpacing(8)
+        navigation_row.setSpacing(6)
 
         self.sync_extents_chk = QCheckBox("Sync Navigation")
         self.sync_extents_chk.setChecked(True)
         navigation_row.addWidget(self.sync_extents_chk)
 
-        self.sync_main_chk = QCheckBox("Sync with QGIS Canvas")
+        self.sync_main_chk = QCheckBox("Sync Canvas")
         self.sync_main_chk.setChecked(True)
         navigation_row.addWidget(self.sync_main_chk)
 
@@ -678,25 +668,27 @@ class MultiMapDialog(QDialog):
         self.diff_btn.toggled.connect(self._on_diff_toggled)
         navigation_row.addWidget(self.diff_btn)
 
+        self.drawer_btn = QPushButton("📋 Legend Drawer")
+        self.drawer_btn.setToolTip("Toggle right-side drawer stacking all panel micro-legends in one column.")
+        self.drawer_btn.clicked.connect(self.toggle_legend_drawer)
+        navigation_row.addWidget(self.drawer_btn)
 
-        navigation_row.addSpacing(6)
+        self.player_btn = QPushButton("▶ Play Timeline")
+        self.player_btn.setToolTip("Auto-cycle active panel focus or cross-fade timeline layers.")
+        self.player_btn.clicked.connect(self.toggle_timeline_player)
+        navigation_row.addWidget(self.player_btn)
+
+        navigation_row.addStretch(1)
 
         self.match_scale_btn = QPushButton("Match Scale")
         self.match_scale_btn.clicked.connect(self.match_scales_to_active)
-        self.match_scale_btn.setToolTip(
-            "Sync zoom scales of all panels to match active panel scale."
-        )
         navigation_row.addWidget(self.match_scale_btn)
 
         self.match_extent_btn = QPushButton("Match Extent")
         self.match_extent_btn.clicked.connect(self.match_extents_to_active)
-        self.match_extent_btn.setToolTip(
-            "Sync full extent (center and zoom scale) of all panels to match active panel."
-        )
         navigation_row.addWidget(self.match_extent_btn)
 
         self.fit_all_btn = QPushButton("Fit All")
-        self.fit_all_btn.setToolTip("Zoom every panel to full extent of visible layers.")
         self.fit_all_btn.clicked.connect(self.fit_all_panels)
         navigation_row.addWidget(self.fit_all_btn)
 
@@ -712,20 +704,13 @@ class MultiMapDialog(QDialog):
             "1:100,000",
             "1:250,000",
         ])
-        self.scale_preset_combo.setToolTip("Set standard cartographic zoom scale for all panels.")
         self.scale_preset_combo.currentTextChanged.connect(self._on_scale_preset_selected)
         navigation_row.addWidget(self.scale_preset_combo)
 
-        navigation_row.addStretch(1)
-
-        self.workflow_hint = QLabel(
-            "<b>Fast comparison:</b> choose a panel count, then click "
-            "<b>Choose for Me</b>."
-        )
-        self.workflow_hint.setObjectName("WorkflowHint")
-        self.workflow_hint.setWordWrap(True)
-        navigation_row.addWidget(self.workflow_hint, 1)
         toolbar_layout.addLayout(navigation_row)
+
+        root_layout.addWidget(self.toolbar_frame)
+
 
         body_layout = QHBoxLayout()
         body_layout.setContentsMargins(0, 0, 0, 0)
@@ -775,7 +760,12 @@ class MultiMapDialog(QDialog):
         self.status_label.setObjectName("StatusLabel")
         status_layout.addWidget(self.status_label)
 
+        self.workflow_hint = QLabel()
+        self.workflow_hint.setObjectName("WorkflowHint")
+        status_layout.addWidget(self.workflow_hint)
+
         status_layout.addStretch(1)
+
 
         self.scale_readout = QLabel("Scale: 1:—")
         self.scale_readout.setObjectName("ScaleReadout")
