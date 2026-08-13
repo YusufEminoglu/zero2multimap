@@ -1325,9 +1325,12 @@ class MultiMapDialog(QDialog):
 
     def on_panel_extent_changed(self, trigger_panel: MapPanelWidget) -> None:
         """Synchronizes other panels when one is panned or zoomed."""
-        if trigger_panel == self.active_panel:
+        if hasattr(self, "active_panel") and self.active_panel != trigger_panel:
+            self.set_active_panel(trigger_panel)
+        else:
             self.scale_readout.setText(f"Scale: 1:{int(trigger_panel.canvas.scale()):,}")
             self.update_extent_boxes()
+
 
         if self._is_syncing or not self.sync_extents_chk.isChecked():
             return

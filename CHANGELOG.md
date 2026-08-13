@@ -1,6 +1,25 @@
 # Changelog
 
+## [1.0.0] - 2026-08-13
+
+### Added
+- **Dynamic Real-Time Scale Readout**: Status bar scale readout (`Scale: 1:25,000`) now updates dynamically on every viewport zoom and pan event.
+- **Visual Spatial Difference Engine (⚡)**: Compute geometric differences between comparison layers with green (added) and red (removed) overlays and a live Overlap % readout.
+- **Timeline Transition Player (▶)**: Auto-cycle active panel focus or cross-fade timeline layers sequentially across viewports.
+- **HTML Presentation Slide Mode (📺)**: Export offline HTML dashboards featuring full-screen slide presentation mode with arrow key navigation.
+- **Two-Row Spacious Toolbar Layout**: Restructured setup and navigation toolbars into 2 clean rows ensuring 100% visibility for all action buttons.
+- **Upgraded GitHub Pages Site**: Complete redesign of documentation landing site and user manual.
+- **Official v1.0.0 Icon**: Modern 3D glass icon with neon map panels and central laser crosshairs.
+
+## [0.6.0] - 2026-08-13
+
+### Added
+- **Visual Spatial Difference Engine (⚡)**: Compute geometric differences between Panel 1 & 2 layers inside visible extent.
+- **Timeline Transition Player (▶)**: Auto-cycle panel focus and timeline layers on timer ticks.
+- **HTML Presentation Mode (📺)**: Slide presentation view in exported HTML dashboards.
+
 ## [0.5.0] - 2026-08-13
+
 
 ### Added
 - **Multi-Panel Coordinated Feature Inspector (🎯)**: Click any coordinate point on a panel viewport to query vector attributes and raster cell values across all active viewports simultaneously in a summary popover.
