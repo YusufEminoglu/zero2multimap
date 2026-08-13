@@ -1,6 +1,16 @@
 # Changelog
 
+## [0.5.0] - 2026-08-13
+
+### Added
+- **Multi-Panel Coordinated Feature Inspector (🎯)**: Click any coordinate point on a panel viewport to query vector attributes and raster cell values across all active viewports simultaneously in a summary popover.
+- **Live Viewport Spatial KPIs (📊)**: Real-time calculation of visible bounding box polygon areas (ha/km²) and feature counts displayed as chip bars under each panel.
+- **Workspace Comparison Presets & Scenario Templates (💾)**: Save/load workspace configurations to QSettings or use built-in scenario templates (*Before & After*, *4-Scenario Matrix*, *Temporal Timeline*).
+- **Unified Stacked Legend Drawer (📋)**: Collapsible right-side sidebar panel stacking micro-legends for all active viewports into a single organized column.
+- **Canvas HUD Overlay (🧭)**: On-screen North arrow graphic indicator (`▲ N`) and scale readout rendered on viewport canvas corners.
+
 ## [0.4.0] - 2026-08-13
+
 
 ### Added
 - **Synchronized Measurement Tool**: Interactive distance and area measurement tool integrated into workspace viewports and exported HTML dashboards.

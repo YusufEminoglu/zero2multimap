@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import contextlib
 import re
-from qgis.PyQt.QtCore import Qt, QObject, QEvent, QPoint, pyqtSignal
+import json
+from qgis.PyQt.QtCore import Qt, QObject, QEvent, QPoint, pyqtSignal, QSettings
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtWidgets import (
     QDialog,
@@ -30,6 +31,8 @@ from qgis.PyQt.QtWidgets import (
     QMenu,
     QWidgetAction,
     QFileDialog,
+    QInputDialog,
+    QScrollArea,
 )
 from qgis.core import (
     QgsProject,
@@ -40,9 +43,13 @@ from qgis.core import (
     QgsGeometry,
     QgsVectorLayer,
     QgsRasterLayer,
+    QgsRectangle,
+    QgsFeatureRequest,
+    QgsPointXY,
 )
 from qgis.gui import QgsMapCanvas, QgsVertexMarker, QgsMapToolPan, QgsRubberBand
 from .print_layout import PrintLayoutDialog
+
 
 # Resolved dynamically to bypass static checks and work on both PyQt5 & PyQt6
 WINDOW_FLAGS = Qt.WindowFlags()
@@ -73,11 +80,12 @@ def get_orientation(name: str):
 class CanvasEventFilter(QObject):
     """Filters mouse events on the canvas viewport to track coordinates for the crosshair cursor."""
 
-    def __init__(self, panel: MapPanelWidget, on_mouse_move, on_leave):
+    def __init__(self, panel: MapPanelWidget, on_mouse_move, on_leave, on_click=None):
         super().__init__(panel.canvas.viewport())
         self.panel = panel
         self.on_mouse_move = on_mouse_move
         self.on_leave = on_leave
+        self.on_click = on_click
 
         viewport = panel.canvas.viewport()
         viewport.installEventFilter(self)
@@ -87,18 +95,24 @@ class CanvasEventFilter(QObject):
     def eventFilter(self, obj, event) -> bool:
         event_type = event.type()
         mouse_move = getattr(QEvent, "MouseMove", None)
+        mouse_press = getattr(QEvent, "MouseButtonPress", None)
         if mouse_move is None:
             mouse_move = QEvent.Type.MouseMove
             leave = QEvent.Type.Leave
+            mouse_press = QEvent.Type.MouseButtonPress
         else:
             leave = QEvent.Leave
 
         if event_type == mouse_move:
             pos = event.position().toPoint() if hasattr(event, "position") else event.pos()
             self.on_mouse_move(self.panel, pos)
+        elif event_type == mouse_press and self.on_click:
+            pos = event.position().toPoint() if hasattr(event, "position") else event.pos()
+            self.on_click(self.panel, pos)
         elif event_type == leave:
             self.on_leave(self.panel)
         return super().eventFilter(obj, event)
+
 
 
 class MapPanelWidget(QFrame):
@@ -213,6 +227,23 @@ class MapPanelWidget(QFrame):
         self.pan_tool = QgsMapToolPan(self.canvas)
         self.canvas.setMapTool(self.pan_tool)
 
+        # KPI Chip Bar (bottom of panel)
+        self.kpi_bar = QLabel()
+        self.kpi_bar.setObjectName("KpiBar")
+        self.kpi_bar.setStyleSheet("""
+            QLabel#KpiBar {
+                background-color: rgba(238, 241, 244, 0.95);
+                color: #2a8f85;
+                font-family: Consolas, monospace;
+                font-size: 10px;
+                font-weight: bold;
+                padding: 3px 7px;
+                border-top: 1px solid #cbd3da;
+            }
+        """)
+        self.kpi_bar.setVisible(False)
+        layout.addWidget(self.kpi_bar)
+
         # Custom mouse tracking marker
         self.marker = QgsVertexMarker(self.canvas)
         self.marker.setIconType(QgsVertexMarker.ICON_CROSS)
@@ -220,6 +251,9 @@ class MapPanelWidget(QFrame):
         self.marker.setPenWidth(2)
         self.marker.setIconSize(24)
         self.marker.hide()
+
+        self.hud_label: QLabel | None = None
+
 
     def mousePressEvent(self, event) -> None:
         self.active_changed.emit(self)
@@ -409,6 +443,68 @@ class MapPanelWidget(QFrame):
             pixmap = self.canvas.grab()
             pixmap.save(filepath)
 
+    def update_hud(self, show_hud: bool = False) -> None:
+        """Update or render canvas HUD (North arrow and scale readout)."""
+        if not show_hud:
+            if self.hud_label:
+                self.hud_label.hide()
+            return
+        if not self.hud_label:
+            self.hud_label = QLabel(self.canvas)
+            self.hud_label.setStyleSheet("""
+                background-color: rgba(22, 50, 63, 0.88);
+                color: #ffffff;
+                font-weight: bold;
+                font-size: 11px;
+                padding: 3px 8px;
+                border-radius: 4px;
+            """)
+        scale_val = int(self.canvas.scale())
+        self.hud_label.setText(f"▲ N  |  1:{scale_val:,}")
+        self.hud_label.adjustSize()
+        self.hud_label.move(10, 10)
+        self.hud_label.show()
+
+    def update_kpi_bar(self, visible: bool = True) -> None:
+        """Calculate spatial extent KPI metrics (polygon area in ha/km², feature count)."""
+        if not visible:
+            self.kpi_bar.setVisible(False)
+            return
+        extent = self.canvas.extent()
+        layers = self.canvas.layers()
+        if not layers:
+            self.kpi_bar.setText("KPIs: No visible layers")
+            self.kpi_bar.setVisible(True)
+            return
+
+        total_area_m2 = 0.0
+        total_features = 0
+        extent_geom = QgsGeometry.fromRect(extent)
+
+        for layer in layers:
+            if not layer or not layer.isValid():
+                continue
+            if isinstance(layer, QgsVectorLayer):
+                request = QgsFeatureRequest().setFilterRect(extent)
+                for feat in layer.getFeatures(request):
+                    total_features += 1
+                    geom = feat.geometry()
+                    if geom and not geom.isEmpty() and geom.type() == QgsWkbTypes.PolygonGeometry:
+                        inter = geom.intersection(extent_geom)
+                        if inter and not inter.isEmpty():
+                            total_area_m2 += inter.area()
+
+        if total_area_m2 > 1_000_000:
+            area_str = f"{total_area_m2 / 1_000_000:.2f} km²"
+        elif total_area_m2 > 0:
+            area_str = f"{total_area_m2 / 10_000:.2f} ha"
+        else:
+            area_str = "0 ha"
+
+        self.kpi_bar.setText(f"KPIs: {area_str} · {total_features:,} features in extent")
+        self.kpi_bar.setVisible(True)
+
+
 
 class MultiMapDialog(QDialog):
     """The main floating window that manages the grid of map panels and coordinate syncing."""
@@ -496,6 +592,23 @@ class MultiMapDialog(QDialog):
         self.base_layer_combo.currentTextChanged.connect(self.refresh_layer_panels)
         setup_row.addWidget(self.base_layer_combo)
 
+        self.preset_combo = QComboBox()
+        self.preset_combo.addItems([
+            "Presets / Templates...",
+            "Save Current Setup...",
+            "Template: Before & After (1x2)",
+            "Template: 4-Scenario Matrix (2x2)",
+            "Template: Temporal Timeline (1x3)",
+        ])
+        self.preset_combo.setToolTip("Save or load workspace comparison templates and presets.")
+        self.preset_combo.currentTextChanged.connect(self._on_preset_selected)
+        setup_row.addWidget(self.preset_combo)
+
+        self.drawer_btn = QPushButton("📋 Legend Drawer")
+        self.drawer_btn.setToolTip("Toggle right-side drawer stacking all panel micro-legends in one column.")
+        self.drawer_btn.clicked.connect(self.toggle_legend_drawer)
+        setup_row.addWidget(self.drawer_btn)
+
         setup_row.addStretch(1)
 
         self.refresh_btn = QPushButton("Refresh")
@@ -530,14 +643,27 @@ class MultiMapDialog(QDialog):
 
         self.laser_chk = QCheckBox("Laser Crosshair")
         self.laser_chk.setChecked(True)
-        self.laser_chk.toggled.connect(self._on_laser_toggled)
         navigation_row.addWidget(self.laser_chk)
 
         self.extent_box_chk = QCheckBox("Extent Box")
         self.extent_box_chk.setChecked(True)
-        self.extent_box_chk.setToolTip("Overlay active panel's extent box across all other viewports")
-        self.extent_box_chk.toggled.connect(self._on_extent_box_toggled)
         navigation_row.addWidget(self.extent_box_chk)
+
+        self.kpi_chk = QCheckBox("Viewport KPIs")
+        self.kpi_chk.setToolTip("Show real-time bounding box area (ha/km²) and feature count chips under each panel.")
+        self.kpi_chk.toggled.connect(self._on_kpi_toggled)
+        navigation_row.addWidget(self.kpi_chk)
+
+        self.hud_chk = QCheckBox("Canvas HUD")
+        self.hud_chk.setToolTip("Overlay North arrow and scale indicator on map viewport corners.")
+        self.hud_chk.toggled.connect(self._on_hud_toggled)
+        navigation_row.addWidget(self.hud_chk)
+
+        self.inspect_btn = QPushButton("🎯 Multi-Inspect")
+        self.inspect_btn.setToolTip("Click any point on a panel to query vector attributes and raster values across all active panels.")
+        self.inspect_btn.setCheckable(True)
+        self.inspect_btn.toggled.connect(self._on_inspect_toggled)
+        navigation_row.addWidget(self.inspect_btn)
 
         navigation_row.addSpacing(6)
 
@@ -587,7 +713,9 @@ class MultiMapDialog(QDialog):
         navigation_row.addWidget(self.workflow_hint, 1)
         toolbar_layout.addLayout(navigation_row)
 
-        root_layout.addWidget(self.toolbar_frame)
+        body_layout = QHBoxLayout()
+        body_layout.setContentsMargins(0, 0, 0, 0)
+        body_layout.setSpacing(4)
 
         # Central grid container
         self.grid_container = QFrame()
@@ -595,7 +723,33 @@ class MultiMapDialog(QDialog):
         self.grid_layout = QGridLayout(self.grid_container)
         self.grid_layout.setContentsMargins(2, 2, 2, 2)
         self.grid_layout.setSpacing(3)
-        root_layout.addWidget(self.grid_container, 1)
+        body_layout.addWidget(self.grid_container, 1)
+
+        # Right-side Legend Drawer
+        self.drawer_frame = QFrame()
+        self.drawer_frame.setObjectName("LegendDrawer")
+        self.drawer_frame.setVisible(False)
+        self.drawer_frame.setFixedWidth(250)
+        self.drawer_frame.setStyleSheet("QFrame#LegendDrawer { background: #ffffff; border: 1px solid #cbd3da; border-radius: 6px; }")
+        drawer_layout = QVBoxLayout(self.drawer_frame)
+        drawer_layout.setContentsMargins(8, 8, 8, 8)
+        drawer_title = QLabel("Unified Panel Legends")
+        drawer_title.setStyleSheet("color: #2a8f85; font-size: 12px; font-weight: bold;")
+        drawer_layout.addWidget(drawer_title)
+
+        self.drawer_scroll = QScrollArea()
+        self.drawer_scroll.setWidgetResizable(True)
+        self.drawer_scroll.setStyleSheet("border: none; background: transparent;")
+        self.drawer_content = QWidget()
+        self.drawer_scroll_layout = QVBoxLayout(self.drawer_content)
+        self.drawer_scroll_layout.setContentsMargins(0, 0, 0, 0)
+        self.drawer_scroll_layout.setSpacing(6)
+        self.drawer_scroll.setWidget(self.drawer_content)
+        drawer_layout.addWidget(self.drawer_scroll, 1)
+
+        body_layout.addWidget(self.drawer_frame)
+        root_layout.addLayout(body_layout, 1)
+
 
         # Status Bar
         self.status_frame = QFrame()
@@ -828,7 +982,13 @@ class MultiMapDialog(QDialog):
             )
             panel.active_changed.connect(self.set_active_panel)
 
-            ef = CanvasEventFilter(panel, self.on_mouse_moved_in_panel, self.on_mouse_left_panel)
+            ef = CanvasEventFilter(
+                panel,
+                self.on_mouse_moved_in_panel,
+                self.on_mouse_left_panel,
+                self._on_canvas_clicked,
+            )
+
             self.event_filters.append(ef)
             self.panels.append(panel)
 
@@ -1278,7 +1438,170 @@ class MultiMapDialog(QDialog):
         if self.main_canvas_marker:
             self.main_canvas_marker.hide()
 
+    def _on_canvas_clicked(self, source_panel: MapPanelWidget, pos: QPoint) -> None:
+        """Triggered when mouse clicks on a panel canvas."""
+        if not hasattr(self, "inspect_btn") or not self.inspect_btn.isChecked():
+            return
+        map_point = source_panel.canvas.mapSettings().mapToPixel().toMapCoordinates(pos.x(), pos.y())
+        self.perform_multi_inspect(map_point)
+
+    def _on_preset_selected(self, preset_text: str) -> None:
+        """Handle Preset selection from toolbar dropdown."""
+        if preset_text == "Save Current Setup...":
+            self.save_workspace_preset()
+            self.preset_combo.blockSignals(True)
+            self.preset_combo.setCurrentIndex(0)
+            self.preset_combo.blockSignals(False)
+        elif preset_text.startswith("Template: Before & After"):
+            self.load_built_in_preset("before_after")
+        elif preset_text.startswith("Template: 4-Scenario"):
+            self.load_built_in_preset("matrix_2x2")
+        elif preset_text.startswith("Template: Temporal"):
+            self.load_built_in_preset("timeline_1x3")
+
+    def save_workspace_preset(self) -> None:
+        """Save current workspace layout and panel assignments to QSettings."""
+        preset_name, ok = QInputDialog.getText(self, "Save Workspace Preset", "Preset Name:")
+        if not ok or not preset_name.strip():
+            return
+        settings = QSettings()
+        key = f"zero2multimap/presets/{preset_name.strip()}"
+        data = {
+            "grid": self.grid_combo.currentText(),
+            "base_layer": self.base_layer_combo.currentText(),
+            "panels": [
+                {
+                    "mode": panel.mode,
+                    "layer": panel.layer_combo.currentText(),
+                    "theme": panel.theme_combo.currentText(),
+                    "scale": int(panel.canvas.scale()),
+                }
+                for panel in self.panels
+            ]
+        }
+        settings.setValue(key, json.dumps(data))
+        QMessageBox.information(self, "Workspace Presets", f"Preset '{preset_name.strip()}' saved successfully!")
+
+    def load_built_in_preset(self, preset_type: str) -> None:
+        """Load one of the built-in scenario templates."""
+        if preset_type == "before_after":
+            self.grid_combo.setCurrentText("2 Panels (1x2)")
+            if len(self.panels) >= 2:
+                self.panels[0].mode_combo.setCurrentText("Compare One Layer")
+                self.panels[1].mode_combo.setCurrentText("Compare One Layer")
+        elif preset_type == "matrix_2x2":
+            self.grid_combo.setCurrentText("4 Panels (2x2)")
+        elif preset_type == "timeline_1x3":
+            self.grid_combo.setCurrentText("3 Panels (1x3)")
+            self.auto_fill_time_series()
+
+    def toggle_legend_drawer(self) -> None:
+        """Toggle right-side drawer stacking all panel micro-legends in one column."""
+        if not hasattr(self, "drawer_frame"):
+            return
+        self.drawer_frame.setVisible(not self.drawer_frame.isVisible())
+        if self.drawer_frame.isVisible():
+            self.update_legend_drawer()
+
+    def update_legend_drawer(self) -> None:
+        """Populate right-side drawer with all active panel legends."""
+        if not hasattr(self, "drawer_scroll_layout"):
+            return
+        for i in reversed(range(self.drawer_scroll_layout.count())):
+            item = self.drawer_scroll_layout.itemAt(i)
+            if item and item.widget():
+                item.widget().setParent(None)
+
+        for panel in self.panels:
+            layers = panel.canvas.layers()
+            if not layers:
+                continue
+            card = QFrame()
+            card.setStyleSheet("background: #f8fafc; border: 1px solid #cbd3da; border-radius: 5px; padding: 4px;")
+            card_l = QVBoxLayout(card)
+            card_l.setContentsMargins(4, 4, 4, 4)
+            card_l.setSpacing(2)
+            title = QLabel(f"<b>Panel {panel.index + 1} Legend</b>")
+            title.setStyleSheet("font-size: 11px; color: #2a8f85;")
+            card_l.addWidget(title)
+
+            for lyr in layers:
+                if not lyr or not lyr.isValid():
+                    continue
+                if isinstance(lyr, QgsVectorLayer) and lyr.renderer():
+                    renderer = lyr.renderer()
+                    if hasattr(renderer, "categories"):
+                        for cat in renderer.categories()[:5]:
+                            lbl = cat.label() or str(cat.value())
+                            col = cat.symbol().color().name() if cat.symbol() else "#2a8f85"
+                            row = QLabel(f"▪ {lyr.name()}: {lbl}")
+                            row.setStyleSheet(f"font-size: 10px; color: {col}; font-weight: bold;")
+                            card_l.addWidget(row)
+                    elif hasattr(renderer, "symbol") and renderer.symbol():
+                        col = renderer.symbol().color().name()
+                        row = QLabel(f"▪ {lyr.name()}")
+                        row.setStyleSheet(f"font-size: 10px; color: {col}; font-weight: bold;")
+                        card_l.addWidget(row)
+                elif isinstance(lyr, QgsRasterLayer):
+                    row = QLabel(f"▨ Raster: {lyr.name()}")
+                    row.setStyleSheet("font-size: 10px; color: #3498db; font-weight: bold;")
+                    card_l.addWidget(row)
+            self.drawer_scroll_layout.addWidget(card)
+
+    def _on_kpi_toggled(self, checked: bool) -> None:
+        """Toggle real-time bounding box area and feature count KPI chips under each panel."""
+        for panel in self.panels:
+            panel.update_kpi_bar(checked)
+
+    def _on_hud_toggled(self, checked: bool) -> None:
+        """Toggle North arrow and scale indicator on map viewport corners."""
+        for panel in self.panels:
+            panel.update_hud(checked)
+
+    def _on_inspect_toggled(self, checked: bool) -> None:
+        """Toggle multi-panel coordinated feature inspector mode."""
+        msg = "Multi-Inspect Active: Click any point on a map panel to query all panels." if checked else "Multi-Inspect Off"
+        self.status_label.setText(msg)
+
+    def perform_multi_inspect(self, map_point: QgsPointXY) -> None:
+        """Query vector attributes and raster cell values at map_point across all active panels."""
+        lines = []
+        for index, panel in enumerate(self.panels):
+            p_name = f"Panel {index + 1}"
+            layers = panel.canvas.layers()
+            if not layers:
+                lines.append(f"<b>{p_name}:</b> No active layers")
+                continue
+
+            p_info = []
+            rect = QgsRectangle(map_point.x() - 5, map_point.y() - 5, map_point.x() + 5, map_point.y() + 5)
+            for lyr in layers:
+                if isinstance(lyr, QgsVectorLayer):
+                    req = QgsFeatureRequest().setFilterRect(rect)
+                    feats = list(lyr.getFeatures(req))
+                    if feats:
+                        f = feats[0]
+                        fields = [f"{k}: {f[k]}" for k in f.fields().names()[:3] if f[k] is not None]
+                        f_info = ", ".join(fields) if fields else f"Feature ID {f.id()}"
+                        p_info.append(f"{lyr.name()} ({f_info})")
+                elif isinstance(lyr, QgsRasterLayer):
+                    with contextlib.suppress(Exception):
+                        val, ok = lyr.dataProvider().sample(map_point, 1)
+                        if ok:
+                            p_info.append(f"{lyr.name()} (Val: {val:.2f})")
+
+            val_str = " | ".join(p_info) if p_info else "No features at point"
+            lines.append(f"<b>{p_name}:</b> {val_str}")
+
+        msg = "<br>".join(lines)
+        QMessageBox.information(
+            self,
+            "Multi-Panel Feature Inspector 🎯",
+            f"<b>Coordinate:</b> {map_point.x():.2f}, {map_point.y():.2f}<br><br>{msg}"
+        )
+
     def _on_laser_toggled(self, checked: bool) -> None:
+
         if not checked:
             for panel in self.panels:
                 panel.marker.hide()
