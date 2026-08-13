@@ -301,6 +301,19 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         }
         #measure-readout { color: #e67e22; font-weight: 700; font-family: Consolas, monospace; }
         #coordinates { color: var(--accent); font-family: Consolas, monospace; font-weight: 700; }
+        .grid.presentation-mode {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .grid.presentation-mode .panel {
+            display: none;
+            width: 100%;
+            height: 100%;
+        }
+        .grid.presentation-mode .panel.active-slide {
+            display: flex;
+        }
         @media (max-width: 760px) {
             body { overflow: auto; }
             header { align-items: flex-start; flex-wrap: wrap; }
@@ -330,9 +343,11 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             <button id="zoom-in" type="button" title="Zoom in">+</button>
             <button id="reset-view" type="button" class="btn-accent">Reset View</button>
             <button id="measure-btn" type="button" title="Toggle measurement tool">📏 Measure</button>
+            <button id="presentation-btn" type="button" title="Toggle presentation slide mode">📺 Presentation</button>
             <button id="theme-toggle" type="button" title="Toggle color theme">🌓 Theme</button>
         </div>
     </header>
+
     <main class="grid">
 __PANELS__
     </main>
@@ -357,10 +372,40 @@ __PANELS__
         let isMeasuring = false;
         let measurePoints = [];
 
-        const themes = ["slate", "dark", "emerald"];
-        let currentThemeIndex = themes.indexOf(document.documentElement.getAttribute("data-theme") || "slate");
+        const presentationBtn = document.getElementById("presentation-btn");
+        let isPresentation = false;
+        let currentSlide = 0;
+
+        if (presentationBtn) {
+            presentationBtn.addEventListener("click", () => {
+                isPresentation = !isPresentation;
+                presentationBtn.classList.toggle("active", isPresentation);
+                document.querySelector(".grid").classList.toggle("presentation-mode", isPresentation);
+                updateSlideView();
+            });
+        }
+
+        function updateSlideView() {
+            const panels = document.querySelectorAll(".panel");
+            panels.forEach((p, idx) => {
+                p.classList.toggle("active-slide", isPresentation && idx === currentSlide);
+            });
+        }
+
+        window.addEventListener("keydown", (e) => {
+            if (!isPresentation) return;
+            const panels = document.querySelectorAll(".panel");
+            if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+                currentSlide = (currentSlide + 1) % panels.length;
+                updateSlideView();
+            } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+                currentSlide = (currentSlide - 1 + panels.length) % panels.length;
+                updateSlideView();
+            }
+        });
 
         themeToggle.addEventListener("click", () => {
+
             currentThemeIndex = (currentThemeIndex + 1) % themes.length;
             const nextTheme = themes[currentThemeIndex];
             document.documentElement.setAttribute("data-theme", nextTheme);

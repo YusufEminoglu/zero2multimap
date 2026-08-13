@@ -11,7 +11,8 @@ from __future__ import annotations
 import contextlib
 import re
 import json
-from qgis.PyQt.QtCore import Qt, QObject, QEvent, QPoint, pyqtSignal, QSettings
+from qgis.PyQt.QtCore import Qt, QObject, QEvent, QPoint, pyqtSignal, QSettings, QTimer
+
 from qgis.PyQt.QtGui import QColor
 from qgis.PyQt.QtWidgets import (
     QDialog,
@@ -609,7 +610,13 @@ class MultiMapDialog(QDialog):
         self.drawer_btn.clicked.connect(self.toggle_legend_drawer)
         setup_row.addWidget(self.drawer_btn)
 
+        self.player_btn = QPushButton("▶ Play Timeline")
+        self.player_btn.setToolTip("Auto-cycle active panel focus or cross-fade timeline layers.")
+        self.player_btn.clicked.connect(self.toggle_timeline_player)
+        setup_row.addWidget(self.player_btn)
+
         setup_row.addStretch(1)
+
 
         self.refresh_btn = QPushButton("Refresh")
         self.refresh_btn.clicked.connect(self.refresh_all_canvases)
@@ -664,6 +671,13 @@ class MultiMapDialog(QDialog):
         self.inspect_btn.setCheckable(True)
         self.inspect_btn.toggled.connect(self._on_inspect_toggled)
         navigation_row.addWidget(self.inspect_btn)
+
+        self.diff_btn = QPushButton("⚡ Show Diff")
+        self.diff_btn.setToolTip("Highlight geometric differences (green added, red removed) between comparison layers.")
+        self.diff_btn.setCheckable(True)
+        self.diff_btn.toggled.connect(self._on_diff_toggled)
+        navigation_row.addWidget(self.diff_btn)
+
 
         navigation_row.addSpacing(6)
 
@@ -766,6 +780,14 @@ class MultiMapDialog(QDialog):
         self.scale_readout = QLabel("Scale: 1:—")
         self.scale_readout.setObjectName("ScaleReadout")
         status_layout.addWidget(self.scale_readout)
+
+        status_layout.addSpacing(12)
+
+        self.overlap_label = QLabel("Overlap: —")
+        self.overlap_label.setObjectName("OverlapLabel")
+        self.overlap_label.setStyleSheet("color: #e67e22; font-weight: bold; font-family: Consolas, monospace;")
+        status_layout.addWidget(self.overlap_label)
+
 
         status_layout.addSpacing(12)
 
@@ -1599,6 +1621,106 @@ class MultiMapDialog(QDialog):
             "Multi-Panel Feature Inspector 🎯",
             f"<b>Coordinate:</b> {map_point.x():.2f}, {map_point.y():.2f}<br><br>{msg}"
         )
+
+    def _on_diff_toggled(self, checked: bool) -> None:
+        """Toggle visual spatial difference engine highlights (green added, red removed)."""
+        if not checked:
+            if hasattr(self, "diff_rubber_bands"):
+                for rb in list(self.diff_rubber_bands.values()):
+                    if rb:
+                        with contextlib.suppress(Exception):
+                            rb.hide()
+                self.diff_rubber_bands.clear()
+            self.status_label.setText("Diff Highlights Off")
+            self.overlap_label.setText("Overlap: —")
+            return
+
+        self.status_label.setText("Diff Highlights Active: Green (added), Red (removed)")
+        self.update_spatial_diff_highlights()
+
+    def update_spatial_diff_highlights(self) -> None:
+        """Compute geometric difference between Panel 1 and Panel 2 inside visible extent."""
+        if not hasattr(self, "diff_btn") or not self.diff_btn.isChecked() or len(self.panels) < 2:
+            return
+
+        if not hasattr(self, "diff_rubber_bands"):
+            self.diff_rubber_bands = {}
+
+        for rb in list(self.diff_rubber_bands.values()):
+            if rb:
+                with contextlib.suppress(Exception):
+                    rb.hide()
+        self.diff_rubber_bands.clear()
+
+        p1_layers = [lyr for lyr in self.panels[0].canvas.layers() if isinstance(lyr, QgsVectorLayer)]
+        p2_layers = [lyr for lyr in self.panels[1].canvas.layers() if isinstance(lyr, QgsVectorLayer)]
+
+
+        if not p1_layers or not p2_layers:
+            return
+
+        extent = self.panels[0].canvas.extent()
+        extent_geom = QgsGeometry.fromRect(extent)
+        polygon_geom_type = getattr(QgsWkbTypes, "PolygonGeometry", QgsWkbTypes.PolygonGeometry)
+
+        g1_list = [f.geometry() for f in p1_layers[0].getFeatures(QgsFeatureRequest().setFilterRect(extent)) if f.geometry()]
+        g2_list = [f.geometry() for f in p2_layers[0].getFeatures(QgsFeatureRequest().setFilterRect(extent)) if f.geometry()]
+
+        if not g1_list or not g2_list:
+            return
+
+        g1_combined = QgsGeometry.unaryUnion(g1_list).intersection(extent_geom)
+        g2_combined = QgsGeometry.unaryUnion(g2_list).intersection(extent_geom)
+
+        diff_removed = g1_combined.difference(g2_combined)
+        diff_added = g2_combined.difference(g1_combined)
+
+        if diff_removed and not diff_removed.isEmpty():
+            rb_red = QgsRubberBand(self.panels[0].canvas, polygon_geom_type)
+            rb_red.setColor(QColor(231, 76, 60, 80))
+            rb_red.setStrokeColor(QColor(231, 76, 60, 240))
+            rb_red.setWidth(2)
+            rb_red.setToGeometry(diff_removed, p1_layers[0].crs())
+            rb_red.show()
+            self.diff_rubber_bands["removed"] = rb_red
+
+        if diff_added and not diff_added.isEmpty():
+            rb_green = QgsRubberBand(self.panels[1].canvas, polygon_geom_type)
+            rb_green.setColor(QColor(46, 204, 113, 80))
+            rb_green.setStrokeColor(QColor(46, 204, 113, 240))
+            rb_green.setWidth(2)
+            rb_green.setToGeometry(diff_added, p2_layers[0].crs())
+            rb_green.show()
+            self.diff_rubber_bands["added"] = rb_green
+
+        if not g1_combined.isEmpty() and g1_combined.area() > 0:
+            inter_area = g1_combined.intersection(g2_combined).area()
+            ratio = (inter_area / g1_combined.area()) * 100.0
+            self.overlap_label.setText(f"Overlap: {ratio:.1f}%")
+
+    def toggle_timeline_player(self) -> None:
+        """Start or stop timeline player auto-cycling panel highlights."""
+        if not hasattr(self, "timeline_timer"):
+            self.timeline_timer = QTimer(self)
+            self.timeline_timer.timeout.connect(self._on_timeline_timer_tick)
+            self.timeline_index = 0
+
+        if self.timeline_timer.isActive():
+            self.timeline_timer.stop()
+            self.player_btn.setText("▶ Play Timeline")
+            self.status_label.setText("Timeline Player Stopped")
+        else:
+            self.timeline_timer.start(1500)
+            self.player_btn.setText("⏸ Pause Timeline")
+            self.status_label.setText("Timeline Player Active")
+
+    def _on_timeline_timer_tick(self) -> None:
+        """Cycle active panel on timer tick."""
+        if not self.panels:
+            return
+        self.timeline_index = (self.timeline_index + 1) % len(self.panels)
+        self.set_active_panel(self.panels[self.timeline_index])
+
 
     def _on_laser_toggled(self, checked: bool) -> None:
 

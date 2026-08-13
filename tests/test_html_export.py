@@ -48,6 +48,12 @@ class DashboardHtmlTests(unittest.TestCase):
         self.assertIn('id="measure-btn"', result)
         self.assertIn('drawMeasureSVGs', result)
 
+    def test_supports_presentation_mode_export(self) -> None:
+        result = build_dashboard_html("Presentation Test", 1, 2, [self.panel, self.panel])
+        self.assertIn('id="presentation-btn"', result)
+        self.assertIn('presentation-mode', result)
+
+
 
     def test_escapes_script_terminators_in_crs_metadata(self) -> None:
         panel = dict(self.panel)
