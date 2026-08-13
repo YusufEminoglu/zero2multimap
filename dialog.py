@@ -1779,43 +1779,57 @@ class QuickGuideDialog(QDialog):
         self.browser.setOpenExternalLinks(True)
 
         html_help = """
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.5;">
             <h2 style="color: #16323f; font-weight: 700; border-bottom: 2px solid #2a8f85;
                        padding-bottom: 6px; margin-top: 0;">
-                02Multimap Workspace Guide
+                02Multimap Workspace Guide (v0.6.0)
             </h2>
-            <p>Welcome to <b>02Multimap</b>, a multi-panel synchronized comparative map visualization workspace.</p>
+            <p>Welcome to <b>02Multimap</b>, the advanced multi-panel synchronized spatial comparison workspace for QGIS.</p>
+            
+            <div style="background-color: #eef1f4; border: 1px solid #cbd3da; border-radius: 6px; padding: 10px; margin-bottom: 12px;">
+                <b>🌐 Online User Manual & Detailed Documentation:</b><br>
+                <a href="https://yusufeminoglu.github.io/zero2multimap/" style="color: #2a8f85; font-weight: bold; text-decoration: underline;">
+                    https://yusufeminoglu.github.io/zero2multimap/
+                </a>
+            </div>
 
-            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">
-                1. Fast Layer & Time-Series Auto-Fill
-            </h3>
-            <p>Select 2 to 8 panels, then click <b>Choose for Me · Current Extent</b> or <b>Time-Series Auto-Fill</b> to assign layers automatically.</p>
-
-            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">
-                2. Extent Box & Legend Overlay
-            </h3>
-            <ul>
-                <li><b>Extent Box:</b> Displays the bounding box of the active viewport over all other viewports.</li>
-                <li><b>Micro-Legend (🎨):</b> Click the palette button on any panel header card to toggle a floating legend overlay.</li>
-            </ul>
-
-            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">
-                3. Quick Panel Tools & Scale Presets
+            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 14px; margin-bottom: 4px;">
+                1. Synchronized Viewport Grids & Fast Auto-Fill
             </h3>
             <ul>
-                <li><b>Zoom to Layer (🔍):</b> Instantly zooms that panel to focus layer extent.</li>
-                <li><b>Opacity (🌓):</b> Slider popup to adjust layer transparency.</li>
-                <li><b>Snapshot (📷):</b> Save PNG image of individual viewports.</li>
-                <li><b>Scale Presets:</b> Jump all viewports to standard cartographic scales (e.g., 1:10,000, 1:25,000).</li>
+                <li><b>Grid Topologies:</b> Select 2, 3, 4, 6, or 8 synchronized map viewports in horizontal, vertical, or grid matrices.</li>
+                <li><b>Choose for Me:</b> Automatically assigns a different spatial layer to every panel, prioritizing layers intersecting the current map extent.</li>
+                <li><b>Time-Series Auto-Fill:</b> Sorts layers chronologically by date/year in their names and populates viewports in timeline order.</li>
             </ul>
 
-            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 16px; margin-bottom: 6px;">
-                4. Multi-Theme HTML Dashboard Exporter
+            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 14px; margin-bottom: 4px;">
+                2. Spatial Analysis & Inspection Suite (v0.6.0)
             </h3>
-            <p>Export offline HTML dashboards featuring Slate Light, Dark Midnight, or Emerald Clean themes, complete with micro-legends and live theme toggles.</p>
+            <ul>
+                <li><b>🎯 Multi-Inspect:</b> Click any coordinate on a panel to query vector attributes and raster cell values across all active panels simultaneously.</li>
+                <li><b>⚡ Show Diff:</b> Compute geometric differences between Panel 1 & 2 layers. Renders green (added) and red (removed) overlays with a live <b>Overlap %</b> readout.</li>
+                <li><b>📏 Measurement Tool:</b> Measure distance and area interactively across synchronized map viewports.</li>
+                <li><b>📊 Viewport KPIs:</b> Displays real-time visible bounding box polygon areas (ha/km²) and feature counts beneath each panel.</li>
+            </ul>
+
+            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 14px; margin-bottom: 4px;">
+                3. Cartographic & Viewport Controls
+            </h3>
+            <ul>
+                <li><b>Extent Box & Laser Crosshair:</b> Overlay active panel's extent box across all viewports; track mouse coordinates across canvases simultaneously.</li>
+                <li><b>Scale Presets & Match Extent:</b> Jump all panels to standard cartographic scales (1:1,000 to 1:250,000) or sync zoom/center.</li>
+                <li><b>📋 Legend Drawer & 🧭 Canvas HUD:</b> Access a right-side drawer stacking all panel legends; overlay North arrow and scale graphics on canvas corners.</li>
+                <li><b>▶ Play Timeline:</b> Auto-cycle focus panel highlights or cross-fade timeline layers at customizable playback speeds.</li>
+            </ul>
+
+            <h3 style="color: #2a8f85; font-size: 14px; margin-top: 14px; margin-bottom: 4px;">
+                4. Print Layouts & Multi-Theme HTML Dashboards
+            </h3>
+            <p>Export publication-ready print layouts or self-contained interactive HTML dashboards featuring <b>Slate Light</b>, <b>Dark Midnight</b>, and <b>Emerald Clean</b> themes, <b>📺 Presentation Slide Mode</b>, opacity sliders, and measurement tools.</p>
         </div>
         """
         self.browser.setHtml(html_help)
+
         layout.addWidget(self.browser, 1)
 
         btn_layout = QHBoxLayout()

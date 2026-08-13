@@ -1,1 +1,257 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta http-equiv="refresh" content="0;url=REFERENCE_MANUAL.html"><title>zero2multimap — Reference Manual</title></head><body><p>Redirecting to <a href="REFERENCE_MANUAL.html">zero2multimap — Reference Manual</a>…</p></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>02Multimap — Synchronized Multi-Panel Map Canvases for QGIS</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --panel: #1e293b;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --accent: #2a8f85;
+  --accent-hover: #34a89d;
+  --line: #334155;
+  --card-bg: #1e293b;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+header {
+  border-bottom: 1px solid var(--line);
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.nav-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+}
+.logo span { color: var(--accent); }
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.nav-links a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--text); }
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+
+.hero {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 60px 24px 40px;
+  text-align: center;
+}
+.badge {
+  display: inline-block;
+  background: rgba(42, 143, 133, 0.15);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 20px;
+  padding: 4px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+.hero h1 {
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 16px;
+}
+.hero p {
+  font-size: 18px;
+  color: var(--muted);
+  max-width: 760px;
+  margin: 0 auto 32px;
+}
+.hero-btns {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+.btn-secondary {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+.hero-img-container {
+  max-width: 1100px;
+  margin: 40px auto 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
+.hero-img-container img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.features {
+  max-width: 1200px;
+  margin: 80px auto;
+  padding: 0 24px;
+}
+.section-title {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 40px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+}
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 24px;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+}
+.card-icon {
+  font-size: 28px;
+  margin-bottom: 14px;
+}
+.card h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--accent);
+}
+.card p {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+footer {
+  border-top: 1px solid var(--line);
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav-container">
+    <a href="index.html" class="logo">02<span>Multimap</span></a>
+    <div class="nav-links">
+      <a href="REFERENCE_MANUAL.html">User Manual</a>
+      <a href="https://github.com/YusufEminoglu/zero2multimap" target="_blank">GitHub Repo</a>
+      <a href="REFERENCE_MANUAL.html" class="btn-primary">Documentation</a>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="badge">v0.6.0 Released · QGIS 3.40 LTR & 4.x Compatible</div>
+  <h1>Synchronized Multi-Panel Map Canvases for QGIS</h1>
+  <p>Compare spatial layers, time-series scenarios, and map themes side-by-side in coordinated 2 to 8 panel grids with synchronized laser crosshairs, difference highlights, and HTML presentation dashboards.</p>
+  <div class="hero-btns">
+    <a href="REFERENCE_MANUAL.html" class="btn-primary">📖 Open Reference Manual</a>
+    <a href="https://github.com/YusufEminoglu/zero2multimap" target="_blank" class="btn-secondary">⭐ View on GitHub</a>
+  </div>
+  <div class="hero-img-container">
+    <img src="hero.png" alt="02Multimap Workspace Screenshot">
+  </div>
+</section>
+
+<section class="features">
+  <h2 class="section-title">Key Capabilities</h2>
+  <div class="grid">
+    <div class="card">
+      <div class="card-icon">📐</div>
+      <h3>Dynamic Grid Topologies</h3>
+      <p>Flexible 2, 3, 4, 6, or 8 panel synchronized viewport matrices in horizontal, vertical, or grid layouts with independent splitter controls.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">⚡</div>
+      <h3>Visual Difference Engine</h3>
+      <p>Compute spatial geometry differences between comparison layers. Renders green (added) and red (removed) highlights with live Overlap % ratios.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🎯</div>
+      <h3>Multi-Panel Inspector</h3>
+      <p>Click any point on a map panel to query vector feature attributes and raster cell values across all active panels simultaneously.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📊</div>
+      <h3>Viewport KPIs & Canvas HUD</h3>
+      <p>Real-time calculation of visible polygon areas (ha/km²) and feature counts beneath each panel, paired with corner North Arrow HUD graphics.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">▶</div>
+      <h3>Timeline Transition Player</h3>
+      <p>Auto-cycle active panel focus or cross-fade timeline layers sequentially across panels for time-series urban growth analysis.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📺</div>
+      <h3>HTML Presentation Dashboards</h3>
+      <p>Export interactive, multi-theme (Slate, Midnight, Emerald) offline HTML dashboards complete with full-screen slide presentation mode.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>02Multimap is an open-source QGIS plugin created by <a href="https://github.com/YusufEminoglu" target="_blank">Yusuf Eminoğlu</a>. Licensed under GPL-2.0-or-later.</p>
+</footer>
+
+</body>
+</html>

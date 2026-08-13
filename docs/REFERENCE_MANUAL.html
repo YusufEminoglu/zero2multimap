@@ -52,10 +52,10 @@ th{background:var(--code-bg);font-weight:600}
 </aside>
 <main id="main">
 <h1>02Multimap</h1>
-<p>Multi-panel synchronised map canvases for comparative spatial analysis &bull; v0.2.0</p>
+<p>Multi-panel synchronised map canvases for comparative spatial analysis &bull; v0.6.0</p>
 
 <h2 id="overview">1. Overview</h2>
-<p>02Multimap is a QGIS workspace plugin that creates a multi-panel synchronised map viewer. It provides 2, 3, 4, 6, or 8 independent map canvases in a coordinated grid layout, with real-time navigation syncing, a laser crosshair cursor tracking across all panels, three per-panel render modes, print layout export, and an offline self-contained HTML dashboard export. It targets urban planners, environmental scientists, and demographers who need to compare spatial patterns side-by-side. The plugin is toolbar-only (no QGIS menu entry), has zero external Python dependencies, and is compatible with PyQt5 and PyQt6 via qgis.PyQt compatibility APIs.</p>
+<p>02Multimap is an advanced QGIS workspace plugin that creates a multi-panel synchronised map viewer. It provides 2, 3, 4, 6, or 8 independent map canvases in a coordinated grid layout, with real-time navigation syncing, a laser crosshair cursor tracking across all panels, three per-panel render modes, interactive spatial difference engine, timeline transition player, coordinated multi-panel inspector, print layout export, and offline self-contained HTML dashboard exports with presentation slide mode. It targets urban planners, spatial analysts, environmental scientists, and demographers who need to compare spatial patterns side-by-side without frictionless overhead. The plugin is toolbar-only, has zero external Python dependencies, and is compatible with PyQt5 and PyQt6 via qgis.PyQt compatibility APIs.</p>
 
 <h2 id="features">2. Feature Documentation</h2>
 
@@ -69,29 +69,52 @@ th{background:var(--code-bg);font-weight:600}
 <div class="card">
   <h4>Synchronised Panning and Zooming</h4>
   <p><strong>Sync Navigation</strong> (default on): When any panel's extent changes, all other panels copy that extent. An internal <code>_is_syncing</code> boolean lock prevents cascade loops.</p>
-  <p><strong>Sync with QGIS Canvas</strong> (default on): Panel extents push to the main QGIS canvas and vice versa. Both checkboxes must be on for main-canvas-to-panel propagation.</p>
+  <p><strong>Sync Canvas</strong> (default on): Panel extents push to the main QGIS canvas and vice versa. Both checkboxes must be on for main-canvas-to-panel propagation.</p>
 </div>
 
 <h3>2.3 Laser Crosshair Tracking</h3>
 <div class="card">
   <h4>Coordinated Cursor Across All Views</h4>
-  <p>When moving the mouse over any panel, a green neon <code>QgsVertexMarker</code> (cross, 24 px) appears at the matching geographic coordinate on all other panels. A red marker appears on the main QGIS canvas. Coordinates display in a status bar readout. The markers hide when the mouse leaves the panel. Toggleable via the Laser Crosshair checkbox.</p>
+  <p>When moving the mouse over any panel, a green neon <code>QgsVertexMarker</code> (cross, 24 px) appears at the matching geographic coordinate on all other panels. A red marker appears on the main QGIS canvas. Coordinates display in a status bar readout. Toggleable via the Laser Crosshair checkbox.</p>
 </div>
 
-<h3>2.4 Smart Auto-Fill</h3>
+<h3>2.4 Smart Auto-Fill & Time-Series Auto-Fill</h3>
 <div class="card">
-  <h4>"Choose for Me &mdash; Current Extent"</h4>
-  <p>The teal-accented auto-fill button automatically assigns a different spatial layer to each panel. The algorithm collects all valid spatial layers from the project, orders them by canvas layer order, splits into two groups (layers intersecting the current canvas extent prioritised), and assigns the first N=panels layers. Remaining panels are set to "Follow Main Map". CRS-aware: transforms layer bounding boxes to canvas CRS before intersection testing.</p>
+  <h4>"Choose for Me &mdash; Current Extent" & Time-Series Auto-Fill</h4>
+  <p><strong>Choose for Me:</strong> Automatically assigns a different spatial layer to each panel, prioritising layers intersecting the current canvas extent.</p>
+  <p><strong>Time-Series Auto-Fill:</strong> Sorts project layers chronologically by date/year in their layer names and populates viewports in timeline order.</p>
 </div>
 
-<h3>2.5 Manual Alignment Buttons</h3>
+<h3>2.5 Multi-Panel Coordinated Feature Inspector (🎯 Multi-Inspect)</h3>
 <div class="card">
-  <h4>Scale, Extent, and Full-Extent Alignment</h4>
-  <ul>
-    <li><strong>Match Scale:</strong> Copies the active panel's zoom scale to all panels, preserving each centre.</li>
-    <li><strong>Match Extent:</strong> Copies the active panel's full extent (centre + scale) to all panels.</li>
-    <li><strong>Fit All Panels:</strong> Calls <code>zoomToFullExtent()</code> on every panel.</li>
-  </ul>
+  <h4>Synchronised Vector & Raster Point Queries</h4>
+  <p>Clicking any coordinate point on a panel queries vector feature attributes and raster cell values at that point across <strong>all active panels (Panel 1–8)</strong> simultaneously, rendering a summary popover dialog.</p>
+</div>
+
+<h3>2.6 Visual Spatial Difference Engine (⚡ Show Diff)</h3>
+<div class="card">
+  <h4>Green/Red Highlight Overlays & Overlap %</h4>
+  <p>Computes geometric difference between Panel 1 and Panel 2 layers inside the visible extent. Renders semi-transparent <strong>Green</strong> (added geometries) and <strong>Red</strong> (removed geometries) rubberband overlays on canvas with a live <strong>Overlap %</strong> readout ratio in the status bar.</p>
+</div>
+
+<h3>2.7 Timeline & Scenario Transition Player (▶ Play Timeline)</h3>
+<div class="card">
+  <h4>Sequential Panel & Layer Animation</h4>
+  <p>Auto-cycles active panel focus or cross-fades timeline layers sequentially across panels using an internal playback timer (1.5s interval).</p>
+</div>
+
+<h3>2.8 Viewport Spatial KPIs (📊 Viewport KPIs) & Canvas HUD (🧭 Canvas HUD)</h3>
+<div class="card">
+  <h4>Real-Time Metric Chips & Canvas Graphics</h4>
+  <p><strong>Viewport KPIs:</strong> Dynamically calculates visible bounding box polygon areas (in <code>ha</code> or <code>km²</code>) and feature counts as metric chips below each panel card.</p>
+  <p><strong>Canvas HUD:</strong> Overlays a North arrow indicator (<code>▲ N</code>) and scale readout on viewport corners.</p>
+</div>
+
+<h3>2.9 Workspace Presets & Scenario Templates (💾 Presets) & Legend Drawer (📋 Legend Drawer)</h3>
+<div class="card">
+  <h4>Template Management & Stacked Legends</h4>
+  <p><strong>Presets:</strong> Save workspace configurations to <code>QSettings</code> or load built-in templates (<em>Before & After 1x2</em>, <em>4-Scenario Matrix 2x2</em>, <em>Temporal Timeline 1x3</em>).</p>
+  <p><strong>Legend Drawer:</strong> Collapsible right-side sidebar panel stacking micro-legends for all active viewports into a single column.</p>
 </div>
 
 <h2 id="modes">3. Panel Render Modes</h2>
@@ -106,25 +129,32 @@ th{background:var(--code-bg);font-weight:600}
 <h2 id="export">4. Print Layout and HTML Dashboard Export</h2>
 <div class="card">
   <h4>Print Layout Export</h4>
-  <p>Opens a configuration dialog for: map title (free text), page size (A4/A3/Letter), orientation (Landscape/Portrait), north arrow style (5 options from QGIS built-in SVG arrows), scalebar style (5 options), and export format (PNG, JPEG, PDF, SVG, or Interactive HTML Dashboard). Builds an in-memory <code>QgsLayout</code> with a title label, grid of <code>QgsLayoutItemMap</code> items, north arrow, and scalebar. Exports via <code>QgsLayoutExporter</code>.</p>
+  <p>Opens a configuration dialog for: map title, page size (A4/A3/Letter), orientation (Landscape/Portrait), north arrow style, scalebar style, and export format (PNG, JPEG, PDF, SVG, or Interactive HTML Dashboard). Builds an in-memory <code>QgsLayout</code> with grid maps, north arrow, and scalebar via <code>QgsLayoutExporter</code>.</p>
 </div>
 <div class="card">
-  <h4>Offline HTML Dashboard</h4>
-  <p>When "Interactive HTML Dashboard" is selected, the export pipeline renders each panel's canvas to PNG at up to 2&times; resolution (capped at 1600&times;1200 px) and assembles a single self-contained HTML file with: CSS + vanilla JavaScript (zero external dependencies), grid layout matching the plugin's row/col configuration, synchronised pan via pointer events, synchronised wheel zoom (anchor-based, scale 1&times;&ndash;12&times;), double-click reset to 1&times;, laser cursor tracking via <code>pointermove</code> across all panels, coordinate readout with CRS label, and single-column responsive collapse below 760 px. XSS-safe: HTML-escapes titles, JSON-encodes panel data with <code>&lt;/</code> sanitisation via Unicode escaping.</p>
+  <h4>Multi-Theme Offline HTML Dashboard with Presentation Slide Mode</h4>
+  <p>Renders each panel canvas to high-res PNG and assembles a self-contained HTML dashboard featuring <strong>Slate Light</strong>, <b>Dark Midnight</b>, and <b>Emerald Clean</b> themes, interactive distance/area measurement tools (📏), laser crosshairs, scale chips, and a full-screen <b>📺 Presentation Slide Mode</b> with keyboard arrow key navigation (← / →).</p>
 </div>
 
 <h2 id="params">5. Controls Summary</h2>
 <table>
   <tr><th>Control</th><th>Type</th><th>Description</th></tr>
   <tr><td>Panels</td><td>Combo</td><td>6 grid configurations (2/3/4/6/8 panels)</td></tr>
-  <tr><td>Sync Navigation</td><td>QCheckBox (default on)</td><td>Bi-directional pan/zoom sync between panels</td></tr>
-  <tr><td>Sync with QGIS Canvas</td><td>QCheckBox (default on)</td><td>Two-way sync between panels and main canvas</td></tr>
-  <tr><td>Laser Crosshair</td><td>QCheckBox (default on)</td><td>Coordinated cursor marker across all views</td></tr>
-  <tr><td>Optional background</td><td>QgsMapLayerComboBox</td><td>Global base layer for Compare One Layer panels</td></tr>
   <tr><td>Choose for Me</td><td>QPushButton</td><td>Auto-assigns layers to panels from current extent</td></tr>
-  <tr><td>Match Scale / Extent / Fit All</td><td>QPushButton (3)</td><td>Manual alignment between panels</td></tr>
-  <tr><td>Refresh / Export / Quick Guide</td><td>QPushButton (3)</td><td>Canvas refresh, print layout, help dialog</td></tr>
+  <tr><td>Time-Series Auto-Fill</td><td>QPushButton</td><td>Assigns layers chronologically by date/year</td></tr>
+  <tr><td>Presets / Templates</td><td>Combo</td><td>Save/load workspace presets and scenario templates</td></tr>
+  <tr><td>Sync Navigation / Sync Canvas</td><td>QCheckBox (2)</td><td>Bi-directional pan/zoom sync between panels & QGIS canvas</td></tr>
+  <tr><td>Laser Crosshair / Extent Box</td><td>QCheckBox (2)</td><td>Coordinated cursor marker and active extent box overlay</td></tr>
+  <tr><td>Viewport KPIs / Canvas HUD</td><td>QCheckBox (2)</td><td>Real-time polygon area chips and North Arrow graphic HUD</td></tr>
+  <tr><td>🎯 Multi-Inspect</td><td>QPushButton (Checkable)</td><td>Click any coordinate to query all panels simultaneously</td></tr>
+  <tr><td>⚡ Show Diff</td><td>QPushButton (Checkable)</td><td>Green (added) / Red (removed) geometry difference highlights</td></tr>
+  <tr><td>📋 Legend Drawer</td><td>QPushButton</td><td>Right-side sidebar stacking all panel legends</td></tr>
+  <tr><td>▶ Play Timeline</td><td>QPushButton</td><td>Auto-cycles focus panel highlight across time-series</td></tr>
+  <tr><td>Match Scale / Extent / Fit All</td><td>QPushButton (3)</td><td>Manual scale/extent alignment between panels</td></tr>
+  <tr><td>Scale Preset...</td><td>Combo</td><td>Jump all panels to standard cartographic scales (1:1k to 1:250k)</td></tr>
+  <tr><td>Refresh / Export / Quick Guide</td><td>QPushButton (3)</td><td>Canvas refresh, print layout/HTML export, user guide</td></tr>
 </table>
+
 
 <h2 id="workflow">6. Workflow Guide</h2>
 <ol>
