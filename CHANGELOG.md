@@ -1,6 +1,32 @@
 # Changelog
 
+## [0.4.0] - 2026-08-13
+
+### Added
+- **Synchronized Measurement Tool**: Interactive distance and area measurement tool integrated into workspace viewports and exported HTML dashboards.
+- **100% Complete Multi-Layer & Tile Rendering Engine**: Switched HTML export renderer to dual-engine sequential and parallel map settings, ensuring all raster tiles, background layers, and vector features are captured without omissions.
+- **Rich Panel Metadata & Scale Chips**: HTML export cards now include active scale readouts (e.g. `1:25,000`) and detailed layer feature count tooltips.
+
+## [0.3.1] - 2026-08-13
+
+
+### Added
+- **Micro-Legend Overlay (🎨)**: Toggle floating legend cards directly on individual map viewports showing vector categories and single-symbol colors.
+- **Time-Series Auto-Fill**: Automatically parse years/dates from layer names and populate comparison viewports in chronological order.
+- **HTML Dashboard Embedded Legends**: Exported interactive HTML dashboards now include micro-legend cards matching QGIS vector layer symbology.
+
+## [0.3.0] - 2026-08-13
+
+
+### Added
+- **Dynamic Extent Bounding Box Overlay**: Overlay active viewport rectangle on all other viewports in real time to provide immediate macro/micro spatial context.
+- **Quick Panel Header Controls**: Added *Zoom to Layer Extent* (🔍), *Layer Opacity slider popup* (🌓), *PNG snapshot button* (📷), and layer geometry type badges (`Vector`, `Raster`, `Theme`) on each panel header card.
+- **Cartographic Scale Presets**: Dropdown to jump all viewports simultaneously to standard scales (1:1,000, 1:2,500, 1:5,000, 1:10,000, 1:25,000, 1:50,000, 1:100,000, 1:250,000).
+- **Multi-Theme HTML Dashboards**: Export interactive HTML dashboards in *Slate Light*, *Dark Midnight*, or *Emerald Clean* themes, complete with client-side theme switcher and layer opacity sliders.
+- **Active Scale Readout**: Real-time cartographic scale readout in status bar for active panel viewports.
+
 ## [0.2.3] - 2026-08-07
+
 
 - Added online user manual link (https://yusufeminoglu.github.io/zero2multimap/) and GitHub repository star call-to-action.
 

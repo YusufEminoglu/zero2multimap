@@ -1,8 +1,17 @@
 from __future__ import annotations
 
+import sys
 import unittest
+from pathlib import Path
 
-from html_export import build_dashboard_html
+plugin_dir = str(Path(__file__).resolve().parent.parent)
+if plugin_dir not in sys.path:
+    sys.path.insert(0, plugin_dir)
+
+try:
+    from zero2multimap.html_export import build_dashboard_html
+except ImportError:
+    from html_export import build_dashboard_html
 
 
 class DashboardHtmlTests(unittest.TestCase):
@@ -25,6 +34,20 @@ class DashboardHtmlTests(unittest.TestCase):
         self.assertNotIn("leaflet", result.lower())
         self.assertIn("pointermove", result)
         self.assertIn("wheel", result)
+        self.assertIn('class="opacity-slider"', result)
+
+    def test_supports_dashboard_themes(self) -> None:
+        result_dark = build_dashboard_html("Dark Theme", 1, 1, [self.panel], theme="dark")
+        self.assertIn('data-theme="dark"', result_dark)
+
+        result_emerald = build_dashboard_html("Emerald Theme", 1, 1, [self.panel], theme="emerald")
+        self.assertIn('data-theme="emerald"', result_emerald)
+
+    def test_supports_measurement_tool(self) -> None:
+        result = build_dashboard_html("Measure Test", 1, 1, [self.panel])
+        self.assertIn('id="measure-btn"', result)
+        self.assertIn('drawMeasureSVGs', result)
+
 
     def test_escapes_script_terminators_in_crs_metadata(self) -> None:
         panel = dict(self.panel)

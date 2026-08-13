@@ -2,8 +2,8 @@
 name=02Multimap: Sync-up Map Layers
 qgisMinimumVersion=3.40
 qgisMaximumVersion=4.99
-description=Smart multi-panel layer comparison with synchronized canvases, laser tracking, and offline HTML exports.
-version=0.2.3
+description=Smart multi-panel layer comparison with synchronized canvases, extent bounding boxes, micro-legends, interactive measurements, scale presets, and offline HTML dashboards.
+version=0.4.0
 author=Yusuf Eminoglu
 email=yusuf.eminoglu@deu.edu.tr
 
@@ -11,14 +11,15 @@ about=02Multimap is an advanced, high-performance workspace plugin designed for 
     
     Key Capabilities:
     1. Synchronized Viewport Grids: Rebuild your workspace into 2, 3, 4, 6, or 8 synchronized map canvases (in horizontal, vertical, or grid matrices).
-    2. Dynamic Spacing Splitters: Interactively drag and resize panel borders using smooth split sliders to focus on specific viewports.
-    3. Bi-directional Syncing: Automatically coordinate map navigation, zoom, and panning across all panels, optionally synced with the main QGIS canvas.
-    4. Synchronized Laser Cursor: Track coordinates across all canvases simultaneously with custom colored crosshairs following your mouse movement.
-    5. Clear Comparison Modes: Let each canvas follow the main map, use a project Map Theme, or compare one isolated layer on top of an optional shared background.
-    6. Manual Scale Alignments: Match map scales or spatial extents with single-click buttons when automated syncing is disabled.
-    7. Professional Print layouts: Add titles, 5 Scalebar options, and 5 North Arrow graphics, exporting the grid matrix directly to PDF, SVG, PNG, or JPEG.
-    8. Offline HTML Dashboards: Export the exact QGIS rendering of every panel—including labels, vector styles, rasters, and themes—to one self-contained HTML file with synchronized pan, zoom, coordinates, and laser tracking.
-    9. Smart Auto-Fill: Choose a grid size and automatically assign a different layer to every panel, prioritizing layers that intersect the current QGIS map extent.
+    2. Dynamic Extent Bounding Box: Overlay the active viewport rectangle over all other viewports to visualize geographic context immediately.
+    3. Quick Panel Controls & Micro-Legends: Zoom to layer extent, adjust transparency sliders, toggle floating mini-legends, view geometry badges, and save PNG snapshots.
+    4. Synchronized Measurement Tool: Measure distance and area interactively across viewports in QGIS and exported HTML dashboards.
+    5. Time-Series Auto-Fill: Automatically sort layers chronologically by date/year and assign across comparison viewports.
+    6. Bi-directional Navigation & Cartographic Scale Presets: Coordinate map navigation across all panels and jump instantly to standard cartographic scales.
+    7. Synchronized Laser Cursor: Track coordinates across all canvases simultaneously with custom colored crosshairs following your mouse movement.
+    8. Professional Print Layouts: Add titles, 5 Scalebar options, and 5 North Arrow graphics, exporting the grid matrix directly to PDF, SVG, PNG, or JPEG.
+    9. Premium HTML Dashboards: Export exact panel rendering to self-contained HTML files featuring Slate Light, Dark Midnight, and Emerald Clean themes with live theme switching, opacity controls, measurement tool, and legends.
+    10. Smart Auto-Fill: Choose a grid size and automatically assign a different layer to every panel, prioritizing layers that intersect the current QGIS map extent.
 
 tracker=https://github.com/YusufEminoglu/zero2multimap/issues
 repository=https://github.com/YusufEminoglu/zero2multimap
@@ -34,6 +35,9 @@ hasProcessingProvider=no
 license=GPL-3
 
 changelog=
+    02Multimap 0.4.0 - Major update: added interactive multi-viewport Measurement tool (distance and area), enhanced 100% complete layer rendering for tile/raster layers, and added live measurement tools to exported HTML dashboards.
+    02Multimap 0.3.1 - added interactive micro-legend overlay cards for each viewport card, time-series chronological layer auto-fill, and embedded legend support in offline HTML dashboards.
+    02Multimap 0.3.0 - Major release: added dynamic Extent Bounding Box overlays across viewports, quick panel controls (Zoom to Layer, Opacity slider, Snapshot), cartographic Scale Presets, and multi-theme HTML Dashboards (Slate Light, Dark Midnight, Emerald Clean) with live theme toggles.
     02Multimap 0.2.0 - added extent-aware Choose for Me panel assignment, redesigned one-layer comparison guidance, and replaced the network-dependent HTML exporter with an offline, exact-render dashboard verified on QGIS 3.40 LTR and QGIS 4.
     02Multimap 0.1.5 - removed the shared top-level QGIS menu entry (toolbar icon only) and added a remembered export folder for the print/HTML layout exporter.
     02Multimap 0.1.3 - minor revision: replaced the plugin icon with a modern, high-contrast vector style icon compatible with light/dark themes.

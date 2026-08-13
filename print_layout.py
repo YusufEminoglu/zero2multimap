@@ -40,9 +40,15 @@ from qgis.core import (
     QgsLayoutPoint,
     QgsLayoutSize,
     QgsUnitTypes,
+    QgsMapSettings,
     QgsMapRendererParallelJob,
+    QgsMapRendererSequentialJob,
+    QgsVectorLayer,
+    QgsRasterLayer,
+    QgsWkbTypes,
 )
 from .html_export import build_dashboard_html
+
 
 
 class PrintLayoutDialog(QDialog):
@@ -100,7 +106,7 @@ class PrintLayoutDialog(QDialog):
         ])
         form.addRow("Scalebar Style:", self.scalebar_combo)
 
-        # 5. Export Format
+        # 5. Export Format & Theme
         self.format_combo = QComboBox()
         self.format_combo.addItem("PNG Image (*.png)", ".png")
         self.format_combo.addItem("JPEG Image (*.jpg)", ".jpg")
@@ -110,10 +116,18 @@ class PrintLayoutDialog(QDialog):
         self.format_combo.currentIndexChanged.connect(self._on_format_changed)
         form.addRow("Export Format:", self.format_combo)
 
+        self.html_theme_combo = QComboBox()
+        self.html_theme_combo.addItem("Slate Light (Default)", "slate")
+        self.html_theme_combo.addItem("Dark Midnight (Night Mode)", "dark")
+        self.html_theme_combo.addItem("Emerald Clean", "emerald")
+        self.html_theme_combo.setVisible(False)
+        form.addRow("HTML Theme:", self.html_theme_combo)
+
         self.format_help = QLabel()
         self.format_help.setWordWrap(True)
         self.format_help.setObjectName("ExportFormatHelp")
         form.addRow("", self.format_help)
+
 
         # 6. Export File Path
         path_layout = QHBoxLayout()
@@ -155,10 +169,12 @@ class PrintLayoutDialog(QDialog):
 
     def _on_format_changed(self) -> None:
         """Explain the selected export type and keep the call to action clear."""
-        if self.format_combo.currentData() == ".html":
+        is_html = self.format_combo.currentData() == ".html"
+        self.html_theme_combo.setVisible(is_html)
+        if is_html:
             self.format_help.setText(
                 "Creates one offline-ready HTML file with exact QGIS panel "
-                "rendering, synchronized pan/zoom, coordinates, and laser tracking."
+                "rendering, synchronized pan/zoom, coordinates, themes, and laser tracking."
             )
             self.export_btn.setText("Export HTML Dashboard")
         else:
@@ -167,6 +183,7 @@ class PrintLayoutDialog(QDialog):
                 "and scale bar settings above."
             )
             self.export_btn.setText("Export Layout")
+
 
     def browse_export_path(self) -> None:
         """Opens file dialog based on selected format."""
@@ -375,21 +392,50 @@ class PrintLayoutDialog(QDialog):
 
     def _rendered_panel_data(self, panel, index: int) -> dict[str, object]:
         """Render one canvas to PNG and collect its browser metadata."""
-        settings = panel.canvas.mapSettings()
+        canvas_layers = panel.canvas.layers()
+        if not canvas_layers and panel.mode == "sync":
+            canvas_layers = list(self.iface.mapCanvas().layers())
+
+        settings = QgsMapSettings()
+        settings.setDestinationCrs(panel.canvas.mapSettings().destinationCrs())
+        settings.setLayers(canvas_layers)
+        settings.setExtent(panel.canvas.extent())
+        settings.setBackgroundColor(panel.canvas.canvasColor())
+        settings.setTransformContext(QgsProject.instance().transformContext())
+        settings.setLayerStyleOverrides(panel.canvas.mapSettings().layerStyleOverrides())
+
+        flag_antialiasing = getattr(QgsMapSettings, "Antialiasing", None)
+        flag_advanced = getattr(QgsMapSettings, "UseAdvancedEffects", None)
+        flag_hq = getattr(QgsMapSettings, "HighQualityRender", None)
+
+        flags = QgsMapSettings.Flags()
+        if flag_antialiasing is not None:
+            flags |= flag_antialiasing
+        if flag_advanced is not None:
+            flags |= flag_advanced
+        if flag_hq is not None:
+            flags |= flag_hq
+        settings.setFlags(flags)
+
         source_width = max(1, panel.canvas.width())
         source_height = max(1, panel.canvas.height())
         scale_factor = min(2.0, 1600.0 / source_width, 1200.0 / source_height)
         output_width = max(640, int(source_width * scale_factor))
         output_height = max(420, int(source_height * scale_factor))
         settings.setOutputSize(QSize(output_width, output_height))
-        settings.setExtent(panel.canvas.extent())
 
-        render_job = QgsMapRendererParallelJob(settings)
+        render_job = QgsMapRendererSequentialJob(settings)
         render_job.start()
         render_job.waitForFinished()
         image = render_job.renderedImage()
+
         if image.isNull():
-            raise RuntimeError(f"Panel {index + 1} could not be rendered.")
+            p_job = QgsMapRendererParallelJob(settings)
+            p_job.start()
+            p_job.waitForFinished()
+            image = p_job.renderedImage()
+            if image.isNull():
+                raise RuntimeError(f"Panel {index + 1} could not be rendered.")
 
         image_bytes = QByteArray()
         buffer = QBuffer(image_bytes)
@@ -400,6 +446,20 @@ class PrintLayoutDialog(QDialog):
             raise OSError(f"Panel {index + 1} image could not be encoded as PNG.")
         buffer.close()
         encoded_image = bytes(image_bytes.toBase64()).decode("ascii")
+
+        layer_details = []
+        rendered_layer_names = []
+        for lyr in canvas_layers:
+            if not lyr or not lyr.isValid():
+                continue
+            rendered_layer_names.append(lyr.name())
+            if isinstance(lyr, QgsVectorLayer):
+                geom_name = QgsWkbTypes.displayString(lyr.wkbType()) if hasattr(QgsWkbTypes, "displayString") else "Vector"
+                fc = lyr.featureCount()
+                fc_str = f"{fc:,} features" if fc >= 0 else "Vector"
+                layer_details.append(f"{lyr.name()} ({geom_name}, {fc_str})")
+            elif isinstance(lyr, QgsRasterLayer):
+                layer_details.append(f"{lyr.name()} (Raster)")
 
         if panel.mode == "layer":
             selected_layer = panel.selected_layer()
@@ -414,12 +474,22 @@ class PrintLayoutDialog(QDialog):
             panel_title = f"Panel {index + 1} · Main map"
             detail = "Follows QGIS canvas"
 
+        detail_tooltip = "Layers: " + " | ".join(layer_details) if layer_details else detail
+
         extent = panel.canvas.extent()
         destination_crs = panel.canvas.mapSettings().destinationCrs()
         crs_label = destination_crs.authid() or destination_crs.description()
+        scale_val = int(panel.canvas.scale())
+
+        legend_items = self._extract_legend_items(panel)
+
         return {
             "title": panel_title,
             "detail": detail,
+            "detail_tooltip": detail_tooltip,
+            "layers": rendered_layer_names,
+            "layer_details": layer_details,
+            "scale": f"1:{scale_val:,}",
             "image_data": f"data:image/png;base64,{encoded_image}",
             "extent": [
                 extent.xMinimum(),
@@ -428,7 +498,41 @@ class PrintLayoutDialog(QDialog):
                 extent.yMaximum(),
             ],
             "crs": crs_label or "Unknown CRS",
+            "legend": legend_items,
         }
+
+    def _extract_legend_items(self, panel) -> list[dict[str, str]]:
+        """Extract category labels and colors for HTML micro-legend from visible layers."""
+        layers = panel.canvas.layers()
+        if not layers:
+            return []
+        items = []
+        for lyr in layers:
+            if not lyr or not lyr.isValid():
+                continue
+            if isinstance(lyr, QgsVectorLayer) and lyr.renderer():
+                renderer = lyr.renderer()
+                if hasattr(renderer, "categories"):
+                    for cat in renderer.categories()[:6]:
+                        lbl = cat.label() or str(cat.value())
+                        sym = cat.symbol()
+                        col = sym.color().name() if sym else "#2a8f85"
+                        items.append({"label": f"{lyr.name()}: {lbl}", "color": col})
+                elif hasattr(renderer, "ranges"):
+                    for rng in renderer.ranges()[:6]:
+                        lbl = rng.label()
+                        sym = rng.symbol()
+                        col = sym.color().name() if sym else "#2a8f85"
+                        items.append({"label": f"{lyr.name()}: {lbl}", "color": col})
+                elif hasattr(renderer, "symbol") and renderer.symbol():
+                    sym = renderer.symbol()
+                    col = sym.color().name() if sym else "#2a8f85"
+                    items.append({"label": lyr.name(), "color": col})
+            elif isinstance(lyr, QgsRasterLayer):
+                items.append({"label": f"Raster: {lyr.name()}", "color": "#3498db"})
+        return items[:10]
+
+
 
     def _write_html_atomically(self, export_path: str, html_content: str) -> None:
         """Commit a UTF-8 HTML file only after the full payload is written."""
@@ -449,6 +553,7 @@ class PrintLayoutDialog(QDialog):
         if not panels:
             raise ValueError("There are no map panels to export.")
 
+        theme = self.html_theme_combo.currentData() or "slate"
         self.export_btn.setEnabled(False)
         self.export_btn.setText("Rendering panels…")
         try:
@@ -461,8 +566,10 @@ class PrintLayoutDialog(QDialog):
                 rows=self.parent_dialog.rows,
                 cols=self.parent_dialog.cols,
                 panels=panels_data,
+                theme=theme,
             )
             self._write_html_atomically(export_path, html_content)
+
         finally:
             self.export_btn.setEnabled(True)
             self._on_format_changed()

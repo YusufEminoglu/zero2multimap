@@ -10,8 +10,8 @@ This document outlines planned improvements, future feature additions, and techn
 timeline
     title 02Multimap Release Milestones
     v0.1.x : Core Multi-Panel Sync : Resizable Grid Splitters : Print Exporter
-    v0.2.x (Current) : Extent-aware Panel Auto-Fill : Clear One-Layer Comparison UX : Offline Exact-Render HTML Dashboard
-    v0.3.x (Short-term) : Temporal Time-Series Sync : Minimap / Overview Indicators : Premium HTML Dashboard Themes (Dark Mode)
+    v0.2.x : Extent-aware Panel Auto-Fill : Clear One-Layer Comparison UX : Offline Exact-Render HTML Dashboard
+    v0.3.x (Current) : Extent Bounding Box Overlay : Quick Panel Tools (Zoom, Opacity, Snapshot) : Multi-Theme HTML Dashboards & Dark Mode : Scale Presets
     v0.4.x (Medium-term) : 3D Map Viewport Synchronization : Dynamic Legend Bindings : Raster Band/Stretch Syncing
     v1.0.x (Long-term) : Web Hosting Integration (GitHub Pages) : Bivariate/LISA Side-by-Side Visualizations
 ```
