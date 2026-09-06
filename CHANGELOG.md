@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.1] - 2026-09-06
+
+- Migrate repository and documentation URLs to GitLab and Cloudflare Pages.
+
 ## [1.0.0] - 2026-08-13
 
 ### Added
