@@ -7,7 +7,7 @@
 **Multi-panel synchronized map visualization workspace for QGIS 3.40 LTR and QGIS 4. Open 2, 3, 4, 6, or 8 map views in a coordinated grid layout with real-time navigation syncing and laser pointer crosshair tracking.**
 
 [![QGIS](https://img.shields.io/badge/QGIS-3.40%2B%20%7C%204.x-93b023?logo=qgis&logoColor=white)](https://plugins.qgis.org/plugins/zero2multimap/)
-[![Version](https://img.shields.io/github/v/tag/YusufEminoglu/zero2multimap?label=version&color=blue)](https://gitlab.com/geospacephilo/EasyFillet/releases)
+[![Version](https://img.shields.io/github/v/tag/YusufEminoglu/zero2multimap?label=version&color=blue)](https://github.com/YusufEminoglu/zero2multimap/releases)
 [![License](https://img.shields.io/badge/license-GPL--3.0-orange)](LICENSE)
 [![Web Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blueviolet?logo=github&logoColor=white)](https://geophilo.com/zero2multimap/)
 
@@ -47,7 +47,7 @@ Instead of toggling layers on and off in a single QGIS map canvas, **02Multimap*
 
 **From the QGIS Plugin Hub:** `Plugins → Manage and Install Plugins…` → search for **"02Multimap"** → *Install*.
 
-**From a release zip:** Download the latest zip from [Releases](https://gitlab.com/geospacephilo/EasyFillet/releases) → `Plugins → Install from ZIP`.
+**From a release zip:** Download the latest zip from [Releases](https://github.com/YusufEminoglu/zero2multimap/releases) → `Plugins → Install from ZIP`.
 
 Requires QGIS 3.40 or newer and is ready for QGIS 4.x.
 
@@ -77,13 +77,13 @@ Requires QGIS 3.40 or newer and is ready for QGIS 4.x.
 
 | Planning & analysis | CAD & production | Visualization & display |
 |---|---|---|
-| [PlanX](https://gitlab.com/geospacephilo/EasyFillet) — spatial-planning suite | [PlanX CAD Toolset](https://gitlab.com/geospacephilo/EasyFillet) — drafting-grade CAD | [PlanX 3D City](https://gitlab.com/geospacephilo/EasyFillet) — Three.js city viewer |
-| [GeoStats Lab](https://gitlab.com/geospacephilo/EasyFillet) — spatial statistics | [EasyFillet](https://gitlab.com/geospacephilo/EasyFillet) — tangent-arc fillet | [3D OSM Model](https://gitlab.com/geospacephilo/EasyFillet) — OSM → 3D city in browser |
-| [Suitability Lab](https://gitlab.com/geospacephilo/EasyFillet) — raster MCDA | [Settlement Toolset](https://gitlab.com/geospacephilo/EasyFillet) — 9-stage settlement plans | [OSM Quick 3D](https://gitlab.com/geospacephilo/EasyFillet) — OSM → native QGIS 3D |
-| [DataCube Lab](https://gitlab.com/geospacephilo/EasyFillet) — spatiotemporal cubes | [UIP Toolset](https://gitlab.com/geospacephilo/EasyFillet) — Turkish master-plan automation | [Urban Procedural 3D](https://gitlab.com/geospacephilo/EasyFillet) — parametric zoning lab |
-| [Urban Resilience](https://gitlab.com/geospacephilo/EasyFillet) — 28 resilience tools | [ParcelFlux](https://gitlab.com/geospacephilo/EasyFillet) — parcel subdivision | [CartoLab](https://gitlab.com/geospacephilo/EasyFillet) — publication cartography |
-| [02viz](https://gitlab.com/geospacephilo/EasyFillet) — visualization studio | | [02Multimap](https://gitlab.com/geospacephilo/EasyFillet) — sync-up map layers |
+| [PlanX](https://github.com/YusufEminoglu/zero2multimap) — spatial-planning suite | [PlanX CAD Toolset](https://github.com/YusufEminoglu/zero2multimap) — drafting-grade CAD | [PlanX 3D City](https://github.com/YusufEminoglu/zero2multimap) — Three.js city viewer |
+| [GeoStats Lab](https://github.com/YusufEminoglu/zero2multimap) — spatial statistics | [EasyFillet](https://github.com/YusufEminoglu/zero2multimap) — tangent-arc fillet | [3D OSM Model](https://github.com/YusufEminoglu/zero2multimap) — OSM → 3D city in browser |
+| [Suitability Lab](https://github.com/YusufEminoglu/zero2multimap) — raster MCDA | [Settlement Toolset](https://github.com/YusufEminoglu/zero2multimap) — 9-stage settlement plans | [OSM Quick 3D](https://github.com/YusufEminoglu/zero2multimap) — OSM → native QGIS 3D |
+| [DataCube Lab](https://github.com/YusufEminoglu/zero2multimap) — spatiotemporal cubes | [UIP Toolset](https://github.com/YusufEminoglu/zero2multimap) — Turkish master-plan automation | [Urban Procedural 3D](https://github.com/YusufEminoglu/zero2multimap) — parametric zoning lab |
+| [Urban Resilience](https://github.com/YusufEminoglu/zero2multimap) — 28 resilience tools | [ParcelFlux](https://github.com/YusufEminoglu/zero2multimap) — parcel subdivision | [CartoLab](https://github.com/YusufEminoglu/zero2multimap) — publication cartography |
+| [02viz](https://github.com/YusufEminoglu/zero2multimap) — visualization studio | | [02Multimap](https://github.com/YusufEminoglu/zero2multimap) — sync-up map layers |
 
 ## 📜 License & author
 
-GPL-3.0 © [Yusuf Eminoğlu](https://github.com/YusufEminoglu) — bug reports and feature requests welcome in [Issues](https://gitlab.com/geospacephilo/EasyFillet/-/issues).
+GPL-3.0 © [Yusuf Eminoğlu](https://github.com/YusufEminoglu) — bug reports and feature requests welcome in [Issues](https://github.com/YusufEminoglu/zero2multimap/issues).

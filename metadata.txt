@@ -7,7 +7,7 @@ version=1.0.1
 author=Yusuf Eminoglu
 email=yusuf.eminoglu@deu.edu.tr
 
-about=02Multimap is an advanced, high-performance workspace plugin designed for comparative spatial analysis and multi-scenario map visualization. Ideal for urban planners, environmental researchers, and demographers, it allows you to compare multiple spatial patterns side-by-side in a coordinated layout. Online User Manual & Documentation: https://geophilo.com/zero2multimap/ | If you find this plugin helpful, please consider starring the repository on GitLab (https://gitlab.com/geospacephilo/zero2multimap)!
+about=02Multimap is an advanced, high-performance workspace plugin designed for comparative spatial analysis and multi-scenario map visualization. Ideal for urban planners, environmental researchers, and demographers, it allows you to compare multiple spatial patterns side-by-side in a coordinated layout. Online User Manual & Documentation: https://geophilo.com/zero2multimap/ | If you find this plugin helpful, please consider starring the repository on GitHub (https://github.com/YusufEminoglu/zero2multimap)!
     
     Key Capabilities:
     1. Synchronized Viewport Grids: Rebuild your workspace into 2, 3, 4, 6, or 8 synchronized map canvases (in horizontal, vertical, or grid matrices).
@@ -20,8 +20,8 @@ about=02Multimap is an advanced, high-performance workspace plugin designed for 
     8. Synchronized Measurement Tool: Measure distance and area interactively across viewports in QGIS and exported HTML dashboards.
     9. Professional Print Layouts & Multi-Theme HTML Dashboards: Export exact panel rendering to self-contained HTML files featuring Slate Light, Dark Midnight, and Emerald Clean themes with live theme switching, presentation slide mode, opacity controls, measurement tool, and legends.
 
-tracker=https://gitlab.com/geospacephilo/zero2multimap/-/issues
-repository=https://gitlab.com/geospacephilo/zero2multimap
+tracker=https://github.com/YusufEminoglu/zero2multimap/issues
+repository=https://github.com/YusufEminoglu/zero2multimap
 homepage=https://geophilo.com/zero2multimap/
 
 category=Vector
