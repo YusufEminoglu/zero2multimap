@@ -9,7 +9,7 @@
 [![QGIS](https://img.shields.io/badge/QGIS-3.40%2B%20%7C%204.x-93b023?logo=qgis&logoColor=white)](https://plugins.qgis.org/plugins/zero2multimap/)
 [![Version](https://img.shields.io/github/v/tag/YusufEminoglu/zero2multimap?label=version&color=blue)](https://gitlab.com/geospacephilo/EasyFillet/releases)
 [![License](https://img.shields.io/badge/license-GPL--3.0-orange)](LICENSE)
-[![Web Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blueviolet?logo=github&logoColor=white)](https://geophilo.pages.dev/zero2multimap/)
+[![Web Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blueviolet?logo=github&logoColor=white)](https://geophilo.com/zero2multimap/)
 
 <img src="docs/hero.png" width="800" alt="02Multimap in action"/>
 
@@ -19,7 +19,7 @@
 
 ## 📖 Documentation
 
-**[Comprehensive Academic Reference Manual](https://geophilo.pages.dev/zero2multimap/)** — complete documentation of every feature, parameter, and workflow. Hosted on Web Documentation.
+**[Comprehensive Academic Reference Manual](https://geophilo.com/zero2multimap/)** — complete documentation of every feature, parameter, and workflow. Hosted on Web Documentation.
 
 
 ## Why 02Multimap?
