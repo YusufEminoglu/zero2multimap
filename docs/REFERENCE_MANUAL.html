@@ -41,7 +41,7 @@
 </aside>
 <main class="chrome-content">
 <h1>02Multimap</h1>
-<p>Multi-panel synchronised map canvases for comparative spatial analysis &bull; v1.0.1</p>
+<p>Multi-panel synchronised map canvases for comparative spatial analysis &bull; v1.1.0</p>
 <div class="video-embed">
   <iframe src="https://www.youtube-nocookie.com/embed/9fSbv-R6HLA" title="02Multimap &mdash; video walkthrough" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 </div>
@@ -90,6 +90,7 @@
 <div class="chrome-card">
   <h4>Green/Red Highlight Overlays & Overlap %</h4>
   <p>Computes geometric difference between Panel 1 and Panel 2 layers inside the visible extent. Renders semi-transparent <strong>Green</strong> (added geometries) and <strong>Red</strong> (removed geometries) rubberband overlays on canvas with a live <strong>Overlap %</strong> readout ratio in the status bar.</p>
+  <p>Both layers are reprojected into Panel 1's canvas CRS before they are compared, so a panel pair whose layers are stored in different coordinate systems is still a valid comparison. Hovering the <strong>Overlap %</strong> readout lists the ground area of each panel, the removed area and the added area, measured on the ellipsoid.</p>
 </div>
 
 <h3>2.7 Timeline & Scenario Transition Player (▶ Play Timeline)</h3>
@@ -101,7 +102,7 @@
 <h3>2.8 Viewport Spatial KPIs (📊 Viewport KPIs) & Canvas HUD (🧭 Canvas HUD)</h3>
 <div class="chrome-card">
   <h4>Real-Time Metric Chips & Canvas Graphics</h4>
-  <p><strong>Viewport KPIs:</strong> Dynamically calculates visible bounding box polygon areas (in <code>ha</code> or <code>km²</code>) and feature counts as metric chips below each panel card.</p>
+  <p><strong>Viewport KPIs:</strong> Dynamically calculates visible polygon areas (in <code>ha</code> or <code>km²</code>) and feature counts as metric chips below each panel card. Areas are measured on the ellipsoid, so a chip reports the same true ground area whether the layer is stored in a geographic CRS (EPSG:4326), in Web Mercator (EPSG:3857) or in a local projected CRS. Hovering a chip names the ellipsoid, the canvas CRS and the fact that the figure is CRS-independent — a Web Mercator square kilometre is 0.569 km² of ground at 41°N, and reading it as a real square kilometre is how such chips end up 1.76x high.</p>
   <p><strong>Canvas HUD:</strong> Overlays a North arrow indicator (<code>▲ N</code>) and scale readout on viewport corners.</p>
 </div>
 

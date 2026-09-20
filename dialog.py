@@ -50,6 +50,13 @@ from qgis.core import (
 )
 from qgis.gui import QgsMapCanvas, QgsVertexMarker, QgsMapToolPan, QgsRubberBand
 from .print_layout import PrintLayoutDialog
+from .spatial_metrics import (
+    compare_layers,
+    format_area,
+    make_area_calculator,
+    resolve_ellipsoid,
+    transform_geometry,
+)
 
 
 # Resolved dynamically to bypass static checks and work on both PyQt5 & PyQt6
@@ -470,7 +477,14 @@ class MapPanelWidget(QFrame):
         self.hud_label.show()
 
     def update_kpi_bar(self, visible: bool = True) -> None:
-        """Calculate spatial extent KPI metrics (polygon area in ha/km², feature count)."""
+        """Calculate spatial extent KPI metrics (polygon area in ha/km², feature count).
+
+        The area is measured on the ellipsoid, so the chip reads the same for a
+        layer in EPSG:4326, in EPSG:3857 and in a local projected CRS. The canvas
+        extent is reprojected into each layer's CRS before clipping; skipping
+        that step does not merely skew the number, it makes the intersection
+        empty and reports ``0 ha`` beside a perfectly good feature count.
+        """
         if not visible:
             self.kpi_bar.setVisible(False)
             return
@@ -481,31 +495,51 @@ class MapPanelWidget(QFrame):
             self.kpi_bar.setVisible(True)
             return
 
+        canvas_crs = self.canvas.mapSettings().destinationCrs()
+        extent_geom = QgsGeometry.fromRect(extent)
         total_area_m2 = 0.0
         total_features = 0
-        extent_geom = QgsGeometry.fromRect(extent)
 
         for layer in layers:
             if not layer or not layer.isValid():
                 continue
-            if isinstance(layer, QgsVectorLayer):
-                request = QgsFeatureRequest().setFilterRect(extent)
-                for feat in layer.getFeatures(request):
-                    total_features += 1
-                    geom = feat.geometry()
-                    if geom and not geom.isEmpty() and geom.type() == QgsWkbTypes.PolygonGeometry:
-                        inter = geom.intersection(extent_geom)
-                        if inter and not inter.isEmpty():
-                            total_area_m2 += inter.area()
+            if not isinstance(layer, QgsVectorLayer):
+                continue
 
-        if total_area_m2 > 1_000_000:
-            area_str = f"{total_area_m2 / 1_000_000:.2f} km²"
-        elif total_area_m2 > 0:
-            area_str = f"{total_area_m2 / 10_000:.2f} ha"
-        else:
-            area_str = "0 ha"
+            layer_crs = layer.crs()
+            needs_reprojection = (
+                layer_crs.isValid() and canvas_crs.isValid() and layer_crs != canvas_crs
+            )
+            if needs_reprojection:
+                clip_geom = transform_geometry(extent_geom, canvas_crs, layer_crs)
+                if clip_geom is None:
+                    # The extent is outside this CRS's valid domain. Reporting a
+                    # number measured in the wrong CRS is worse than reporting
+                    # nothing, so leave this layer out of the totals.
+                    continue
+                measure_crs = layer_crs
+            else:
+                clip_geom = extent_geom
+                measure_crs = canvas_crs
 
-        self.kpi_bar.setText(f"KPIs: {area_str} · {total_features:,} features in extent")
+            calculator = make_area_calculator(measure_crs)
+            for feat in layer.getFeatures(QgsFeatureRequest().setFilterRect(clip_geom.boundingBox())):
+                total_features += 1
+                geom = feat.geometry()
+                if geom and not geom.isEmpty() and geom.type() == QgsWkbTypes.PolygonGeometry:
+                    inter = geom.intersection(clip_geom)
+                    if inter and not inter.isEmpty():
+                        total_area_m2 += calculator.measureArea(inter)
+
+        self.kpi_bar.setText(
+            f"KPIs: {format_area(total_area_m2)} · {total_features:,} features in extent"
+        )
+        self.kpi_bar.setToolTip(
+            "Ellipsoidal area of polygon features clipped to the visible extent "
+            f"({resolve_ellipsoid(QgsProject.instance().ellipsoid())} ellipsoid), "
+            "independent of the layer CRS. Canvas CRS: "
+            f"{canvas_crs.authid() or 'not set'}."
+        )
         self.kpi_bar.setVisible(True)
 
     def resizeEvent(self, event) -> None:
@@ -656,7 +690,10 @@ class MultiMapDialog(QDialog):
         navigation_row.addWidget(self.extent_box_chk)
 
         self.kpi_chk = QCheckBox("Viewport KPIs")
-        self.kpi_chk.setToolTip("Show real-time bounding box area (ha/km²) and feature count chips under each panel.")
+        self.kpi_chk.setToolTip(
+            "Show real-time polygon area (ha/km²) and feature count chips under each panel.\n"
+            "Areas are measured on the ellipsoid, so they are the true ground area in any layer CRS."
+        )
         self.kpi_chk.toggled.connect(self._on_kpi_toggled)
         navigation_row.addWidget(self.kpi_chk)
 
@@ -1635,13 +1672,21 @@ class MultiMapDialog(QDialog):
                 self.diff_rubber_bands.clear()
             self.status_label.setText("Diff Highlights Off")
             self.overlap_label.setText("Overlap: —")
+            self.overlap_label.setToolTip("")
             return
 
         self.status_label.setText("Diff Highlights Active: Green (added), Red (removed)")
         self.update_spatial_diff_highlights()
 
     def update_spatial_diff_highlights(self) -> None:
-        """Compute geometric difference between Panel 1 and Panel 2 inside visible extent."""
+        """Compute the geometric difference between Panel 1 and Panel 2.
+
+        Both layers are unioned in their own CRS and reprojected into Panel 1's
+        canvas CRS *before* any geometry operation. Feeding two layers that
+        disagree on CRS straight into ``difference()`` raises nothing — it
+        returns a confident wrong answer (typically "everything changed"), which
+        is how this went unnoticed.
+        """
         if not hasattr(self, "diff_btn") or not self.diff_btn.isChecked() or len(self.panels) < 2:
             return
 
@@ -1657,48 +1702,52 @@ class MultiMapDialog(QDialog):
         p1_layers = [lyr for lyr in self.panels[0].canvas.layers() if isinstance(lyr, QgsVectorLayer)]
         p2_layers = [lyr for lyr in self.panels[1].canvas.layers() if isinstance(lyr, QgsVectorLayer)]
 
-
         if not p1_layers or not p2_layers:
             return
 
-        extent = self.panels[0].canvas.extent()
-        extent_geom = QgsGeometry.fromRect(extent)
+        canvas_crs = self.panels[0].canvas.mapSettings().destinationCrs()
+        extent_geom = QgsGeometry.fromRect(self.panels[0].canvas.extent())
         polygon_geom_type = getattr(QgsWkbTypes, "PolygonGeometry", QgsWkbTypes.PolygonGeometry)
 
-        g1_list = [f.geometry() for f in p1_layers[0].getFeatures(QgsFeatureRequest().setFilterRect(extent)) if f.geometry()]
-        g2_list = [f.geometry() for f in p2_layers[0].getFeatures(QgsFeatureRequest().setFilterRect(extent)) if f.geometry()]
-
-        if not g1_list or not g2_list:
+        result = compare_layers(p1_layers[0], p2_layers[0], extent_geom, canvas_crs)
+        if result.area_a_m2 <= 0 and result.area_b_m2 <= 0:
+            # Neither panel holds a measurable polygon inside the extent; the
+            # previous readout would be a leftover from another zoom level.
+            self.overlap_label.setText("Overlap: —")
+            self.overlap_label.setToolTip("")
             return
 
-        g1_combined = QgsGeometry.unaryUnion(g1_list).intersection(extent_geom)
-        g2_combined = QgsGeometry.unaryUnion(g2_list).intersection(extent_geom)
-
-        diff_removed = g1_combined.difference(g2_combined)
-        diff_added = g2_combined.difference(g1_combined)
-
-        if diff_removed and not diff_removed.isEmpty():
+        if result.removed is not None:
             rb_red = QgsRubberBand(self.panels[0].canvas, polygon_geom_type)
             rb_red.setColor(QColor(231, 76, 60, 80))
             rb_red.setStrokeColor(QColor(231, 76, 60, 240))
             rb_red.setWidth(2)
-            rb_red.setToGeometry(diff_removed, p1_layers[0].crs())
+            rb_red.setToGeometry(result.removed, canvas_crs)
             rb_red.show()
             self.diff_rubber_bands["removed"] = rb_red
 
-        if diff_added and not diff_added.isEmpty():
-            rb_green = QgsRubberBand(self.panels[1].canvas, polygon_geom_type)
-            rb_green.setColor(QColor(46, 204, 113, 80))
-            rb_green.setStrokeColor(QColor(46, 204, 113, 240))
-            rb_green.setWidth(2)
-            rb_green.setToGeometry(diff_added, p2_layers[0].crs())
-            rb_green.show()
-            self.diff_rubber_bands["added"] = rb_green
+        if result.added is not None:
+            # The green band lives on Panel 2's canvas, which may sit in a
+            # different CRS than the working CRS the difference was computed in.
+            panel2_crs = self.panels[1].canvas.mapSettings().destinationCrs()
+            added_on_p2 = transform_geometry(result.added, canvas_crs, panel2_crs)
+            if added_on_p2 is not None:
+                rb_green = QgsRubberBand(self.panels[1].canvas, polygon_geom_type)
+                rb_green.setColor(QColor(46, 204, 113, 80))
+                rb_green.setStrokeColor(QColor(46, 204, 113, 240))
+                rb_green.setWidth(2)
+                rb_green.setToGeometry(added_on_p2, panel2_crs)
+                rb_green.show()
+                self.diff_rubber_bands["added"] = rb_green
 
-        if not g1_combined.isEmpty() and g1_combined.area() > 0:
-            inter_area = g1_combined.intersection(g2_combined).area()
-            ratio = (inter_area / g1_combined.area()) * 100.0
-            self.overlap_label.setText(f"Overlap: {ratio:.1f}%")
+        if result.area_a_m2 > 0:
+            self.overlap_label.setText(f"Overlap: {result.overlap_percent:.1f}%")
+            self.overlap_label.setToolTip(
+                f"Panel 1: {format_area(result.area_a_m2)} · "
+                f"Panel 2: {format_area(result.area_b_m2)} · "
+                f"removed {format_area(result.removed_area_m2)} · "
+                f"added {format_area(result.added_area_m2)} (ellipsoidal area)"
+            )
 
     def toggle_timeline_player(self) -> None:
         """Start or stop timeline player auto-cycling panel highlights."""
@@ -1819,9 +1868,9 @@ class QuickGuideDialog(QDialog):
             </h3>
             <ul>
                 <li><b>🎯 Multi-Inspect:</b> Click any coordinate on a panel to query vector attributes and raster cell values across all active panels simultaneously.</li>
-                <li><b>⚡ Show Diff:</b> Compute geometric differences between Panel 1 & 2 layers. Renders green (added) and red (removed) overlays with a live <b>Overlap %</b> readout.</li>
+                <li><b>⚡ Show Diff:</b> Compute geometric differences between Panel 1 & 2 layers. Renders green (added) and red (removed) overlays with a live <b>Overlap %</b> readout and a ground-area breakdown on hover. Panels in different coordinate systems are reprojected before comparison.</li>
                 <li><b>📏 Measurement Tool:</b> Measure distance and area interactively across synchronized map viewports.</li>
-                <li><b>📊 Viewport KPIs:</b> Displays real-time visible bounding box polygon areas (ha/km²) and feature counts beneath each panel.</li>
+                <li><b>📊 Viewport KPIs:</b> Displays real-time visible polygon areas (ha/km²) and feature counts beneath each panel. Areas are ellipsoidal (true ground area) and identical whether the layer is stored in EPSG:4326, EPSG:3857 or a projected CRS — hover a chip to see the ellipsoid and canvas CRS.</li>
             </ul>
 
             <h3 style="color: #2a8f85; font-size: 14px; margin-top: 14px; margin-bottom: 4px;">

@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.1.0] - 2026-09-20
+
+### Fixed
+- **Area readouts were wrong in the two CRSs most data actually arrives in.** Every area the plugin reported came from `QgsGeometry.area()`, which returns planimetric area in the *layer's own* units. In **Web Mercator (EPSG:3857)** a square kilometre of map is only `cos(latitude)` of ground — 0.569 km² at 41°N, so each chip read **1.76x high**. In a **geographic CRS (EPSG:4326)** the unit is square degrees: a 1° x 1° polygon covering ~9 413 km² was formatted as **`0.00 ha`**. Areas are now measured on the ellipsoid via `QgsDistanceArea`, so a chip shows the same true ground area regardless of the layer CRS. Projected metre data (UTM, TM) keep their values to within 0.2%.
+- **A project that never set an ellipsoid silently disabled the measurement.** `QgsProject.ellipsoid()` returns `"NONE"`, and `QgsDistanceArea.setEllipsoid("NONE")` does not raise — it falls back to planimetric measurement with no warning. Unset values now resolve to WGS 84.
+- **The difference engine compared geometries from different CRSs.** Panel 1 and Panel 2 layers were unioned and subtracted in their own coordinate systems, so two layers in different CRSs produced a confident wrong answer — typically "everything changed". Both are now reprojected into Panel 1's canvas CRS before any geometry operation, and the green overlay is reprojected onto Panel 2's canvas.
+- **The KPI bar intersected layer geometries with the canvas extent rectangle.** When the layer CRS differed from the canvas CRS the intersection was not merely inaccurate, it was **empty** — the chip printed `0 ha` beside a correct feature count. The extent is now reprojected into each layer's CRS first.
+- **A stale overlap percentage could survive a zoom.** The readout is now cleared when neither panel holds a measurable polygon inside the visible extent.
+
+### Added
+- **`spatial_metrics.py`** — CRS-aware measurement and layer comparison, factored out of the dialog so the maths is testable without a GUI.
+- **Ellipsoidal area and difference figures in tooltips** — the KPI chip and the overlap readout now name the ellipsoid and CRS they measured in, and the overlap tooltip breaks the comparison down into panel 1, panel 2, removed and added ground area.
+- **Two test suites** — a pure-Python suite for the ellipsoid and formatting rules, and a QGIS suite that asserts values on both runtimes (29 checks: Mercator inflation, degree-square area, the empty-intersection trap, cross-CRS comparison, a 500 m widening, the KPI chip's rendered text, and a UTM no-regression case). Every check was confirmed to fail against the 1.0.2 behaviour before being committed.
+
 ## [1.0.2] - 2026-09-16
 
 - Redesign plugin icon to high-end 3D tactile brand design with circular teal pedestal, zero margin, and refreshed documentation links.

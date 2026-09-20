@@ -201,7 +201,7 @@ footer a { color: var(--accent); text-decoration: none; }
 </header>
 
 <section class="hero">
-  <div class="badge">v1.0.1 Released · QGIS 3.40 LTR & 4.x Compatible</div>
+  <div class="badge">v1.1.0 Released · QGIS 3.40 LTR & 4.x Compatible</div>
   <h1>Synchronized Multi-Panel Map Canvases for QGIS</h1>
   <p>Compare spatial layers, time-series scenarios, and map themes side-by-side in coordinated 2 to 8 panel grids with synchronized laser crosshairs, difference highlights, and HTML presentation dashboards.</p>
   <div class="hero-btns">
@@ -229,7 +229,7 @@ footer a { color: var(--accent); text-decoration: none; }
     <div class="card">
       <div class="card-icon">⚡</div>
       <h3>Visual Difference Engine</h3>
-      <p>Compute spatial geometry differences between comparison layers. Renders green (added) and red (removed) highlights with live Overlap % ratios.</p>
+      <p>Compute spatial geometry differences between comparison layers. Renders green (added) and red (removed) highlights with live Overlap % ratios and a ground-area breakdown. Layers in different coordinate systems are reprojected before they are compared.</p>
     </div>
     <div class="card">
       <div class="card-icon">🎯</div>
@@ -239,7 +239,7 @@ footer a { color: var(--accent); text-decoration: none; }
     <div class="card">
       <div class="card-icon">📊</div>
       <h3>Viewport KPIs & Canvas HUD</h3>
-      <p>Real-time calculation of visible polygon areas (ha/km²) and feature counts beneath each panel, paired with corner North Arrow HUD graphics.</p>
+      <p>Real-time calculation of visible polygon areas (ha/km²) and feature counts beneath each panel, paired with corner North Arrow HUD graphics. Areas are measured on the ellipsoid, so the readout is the true ground area whatever CRS the layer is stored in.</p>
     </div>
     <div class="card">
       <div class="card-icon">▶</div>

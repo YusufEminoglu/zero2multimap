@@ -1,0 +1,10 @@
+# Plugin Hub package excludes (path-prefix match, relative to the plugin folder).
+#
+# docs/ is the source of the published manual and landing page, plus the
+# screenshot tooling and two full-resolution brand PNGs. Nothing in the shipped
+# plugin reads it -- no runtime code opens these paths -- and it made up ~90% of
+# the release archive (3.1 MB of a 3.4 MB zip, with hero.png and icon.png alone
+# accounting for 3.0 MB).
+docs
+# CI workflows belong to the repository, not to the installed plugin.
+.github
