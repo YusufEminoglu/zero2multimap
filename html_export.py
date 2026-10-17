@@ -15,7 +15,6 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
     <meta name="generator" content="02Multimap">
     <title>__TITLE__</title>
 
-
     <style>
         :root {
             color-scheme: light dark;
@@ -29,6 +28,8 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             --laser: #e74c3c;
             --bg-body: #dfe4e8;
             --card-shadow: rgba(22, 50, 63, 0.1);
+            --hud-bg: rgba(255, 255, 255, 0.92);
+            --hud-ink: #16323f;
         }
         [data-theme="dark"] {
             color-scheme: dark;
@@ -42,6 +43,8 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             --laser: #ff6b6b;
             --bg-body: #0b0f17;
             --card-shadow: rgba(0, 0, 0, 0.4);
+            --hud-bg: rgba(15, 23, 42, 0.90);
+            --hud-ink: #f0f4f8;
         }
         [data-theme="emerald"] {
             --ink: #064e3b;
@@ -54,6 +57,8 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             --laser: #e11d48;
             --bg-body: #d1fae5;
             --card-shadow: rgba(4, 120, 87, 0.12);
+            --hud-bg: rgba(255, 255, 255, 0.92);
+            --hud-ink: #064e3b;
         }
         * { box-sizing: border-box; }
         html, body { width: 100%; height: 100%; margin: 0; }
@@ -149,9 +154,9 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         .panel-header {
             display: flex;
             align-items: center;
-            gap: 8px;
-            min-height: 36px;
-            padding: 5px 10px;
+            gap: 6px;
+            min-height: 34px;
+            padding: 4px 9px;
             border-bottom: 1px solid var(--line);
             background: var(--soft);
         }
@@ -175,7 +180,7 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             white-space: nowrap;
         }
         .mode-chip {
-            max-width: 45%;
+            max-width: 42%;
             overflow: hidden;
             padding: 2px 7px;
             border: 1px solid var(--line);
@@ -195,7 +200,7 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             color: var(--muted);
         }
         .opacity-slider {
-            width: 54px;
+            width: 50px;
             height: 4px;
             accent-color: var(--accent);
             cursor: pointer;
@@ -226,32 +231,83 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             transition: opacity 0.15s ease;
         }
 
+        .north-arrow-hud {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            z-index: 4;
+            width: 30px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: var(--hud-bg);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+            pointer-events: none;
+            backdrop-filter: blur(4px);
+        }
+        .north-arrow-hud svg {
+            width: 22px;
+            height: 26px;
+        }
+
+        .scale-bar-hud {
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            z-index: 4;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 2px;
+            padding: 4px 7px;
+            border: 1px solid var(--line);
+            border-radius: 5px;
+            background: var(--hud-bg);
+            color: var(--hud-ink);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+            font: 700 10px Consolas, monospace;
+            pointer-events: none;
+            backdrop-filter: blur(4px);
+        }
+        .scale-bar-segments {
+            display: flex;
+            height: 5px;
+            border: 1px solid var(--hud-ink);
+            overflow: hidden;
+        }
+        .scale-seg-dark {
+            height: 100%;
+            background: var(--hud-ink);
+        }
+        .scale-seg-light {
+            height: 100%;
+            background: var(--panel);
+        }
+
         .mini-legend {
             position: absolute;
             bottom: 6px;
             left: 6px;
-
             z-index: 4;
-            max-width: 220px;
-            max-height: 140px;
+            max-width: min(210px, 54%);
+            max-height: 120px;
             overflow-y: auto;
-            padding: 6px 9px;
+            padding: 5px 8px;
             border: 1px solid var(--line);
             border-radius: 6px;
-            background: rgba(255, 255, 255, 0.92);
+            background: var(--hud-bg);
             box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-            font-size: 11px;
-            color: #16323f;
+            font-size: 10.5px;
+            color: var(--hud-ink);
             backdrop-filter: blur(4px);
-        }
-        [data-theme="dark"] .mini-legend {
-            background: rgba(30, 41, 59, 0.92);
-            color: #f0f4f8;
         }
         .mini-legend-title {
             font-weight: 700;
-            font-size: 10px;
-            margin-bottom: 4px;
+            font-size: 9.5px;
+            margin-bottom: 3px;
             color: var(--accent);
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -259,19 +315,25 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 6px;
-            margin-bottom: 3px;
+            gap: 5px;
+            margin-bottom: 2px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
         .legend-swatch {
-            width: 12px;
-            height: 12px;
-            border-radius: 3px;
-            border: 1px solid rgba(0,0,0,0.2);
+            width: 11px;
+            height: 11px;
+            border-radius: 2px;
+            border: 1px solid rgba(0,0,0,0.25);
             flex-shrink: 0;
         }
+        .grid.carto-hidden .north-arrow-hud,
+        .grid.carto-hidden .scale-bar-hud,
+        .grid.carto-hidden .mini-legend {
+            display: none;
+        }
+
         .laser {
             position: absolute;
             z-index: 5;
@@ -339,7 +401,7 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         <div class="heading">
             <h1>__TITLE__</h1>
             <div class="subtitle">
-                02Multimap export · exact QGIS panel rendering · synchronized navigation, measure & laser cursor
+                02Multimap export · exact QGIS panel rendering · synchronized navigation, north arrow, scale bar, legend & laser cursor
             </div>
         </div>
         <div class="toolbar" aria-label="Map navigation">
@@ -347,6 +409,7 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             <span id="zoom-readout" class="zoom-readout">100%</span>
             <button id="zoom-in" type="button" title="Zoom in">+</button>
             <button id="reset-view" type="button" class="btn-accent">Reset View</button>
+            <button id="carto-btn" type="button" class="active" title="Toggle North Arrow, Scale Bar & Legend Overlays">🧭 Carto HUD</button>
             <button id="measure-btn" type="button" title="Toggle measurement tool">📏 Measure</button>
             <button id="presentation-btn" type="button" title="Toggle presentation slide mode">📺 Presentation</button>
             <button id="theme-toggle" type="button" title="Toggle color theme">🌓 Theme</button>
@@ -367,14 +430,19 @@ __PANELS__
         const views = Array.from(document.querySelectorAll(".map-view"));
         const images = Array.from(document.querySelectorAll(".map-image"));
         const lasers = Array.from(document.querySelectorAll(".laser"));
+        const scaleBars = Array.from(document.querySelectorAll(".scale-bar-hud"));
         const coordinateReadout = document.getElementById("coordinates");
         const measureReadout = document.getElementById("measure-readout");
         const zoomReadout = document.getElementById("zoom-readout");
         const themeToggle = document.getElementById("theme-toggle");
         const measureBtn = document.getElementById("measure-btn");
+        const cartoBtn = document.getElementById("carto-btn");
+        const themes = ["slate", "dark", "emerald"];
+        let currentThemeIndex = Math.max(0, themes.indexOf(document.documentElement.getAttribute("data-theme") || "slate"));
         const state = { scale: 1, offsetX: 0, offsetY: 0 };
         let drag = null;
         let isMeasuring = false;
+        let showCarto = true;
         let measurePoints = [];
 
         const presentationBtn = document.getElementById("presentation-btn");
@@ -387,6 +455,15 @@ __PANELS__
                 presentationBtn.classList.toggle("active", isPresentation);
                 document.querySelector(".grid").classList.toggle("presentation-mode", isPresentation);
                 updateSlideView();
+                applyState();
+            });
+        }
+
+        if (cartoBtn) {
+            cartoBtn.addEventListener("click", () => {
+                showCarto = !showCarto;
+                cartoBtn.classList.toggle("active", showCarto);
+                document.querySelector(".grid").classList.toggle("carto-hidden", !showCarto);
             });
         }
 
@@ -403,14 +480,15 @@ __PANELS__
             if (e.key === "ArrowRight" || e.key === "ArrowDown") {
                 currentSlide = (currentSlide + 1) % panels.length;
                 updateSlideView();
+                applyState();
             } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
                 currentSlide = (currentSlide - 1 + panels.length) % panels.length;
                 updateSlideView();
+                applyState();
             }
         });
 
         themeToggle.addEventListener("click", () => {
-
             currentThemeIndex = (currentThemeIndex + 1) % themes.length;
             const nextTheme = themes[currentThemeIndex];
             document.documentElement.setAttribute("data-theme", nextTheme);
@@ -435,6 +513,73 @@ __PANELS__
             });
         });
 
+        function haversineMeters(lon1, lat1, lon2, lat2) {
+            const R = 6371008.8;
+            const toRad = Math.PI / 180.0;
+            const dLat = (lat2 - lat1) * toRad;
+            const dLon = (lon2 - lon1) * toRad;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+        }
+
+        function panelGroundWidthMeters(index) {
+            const data = panelData[index] || panelData[0];
+            if (!data) return 1000;
+            const wgs = data.extent_wgs84;
+            if (Array.isArray(wgs) && wgs.length === 4 && Math.abs(wgs[0]) <= 180 && Math.abs(wgs[2]) <= 180 && Math.abs(wgs[1]) <= 90 && Math.abs(wgs[3]) <= 90) {
+                const midLat = 0.5 * (wgs[1] + wgs[3]);
+                const d = haversineMeters(wgs[0], midLat, wgs[2], midLat);
+                if (d > 0.01) return d;
+            }
+            const ext = data.extent || [0, 0, 1000, 1000];
+            const rawW = Math.abs(ext[2] - ext[0]);
+            if (String(data.crs || "").toUpperCase().includes("4326")) {
+                const midLat = 0.5 * (ext[1] + ext[3]);
+                return haversineMeters(ext[0], midLat, ext[2], midLat);
+            }
+            return rawW > 0 ? rawW : 1000;
+        }
+
+        function niceScaleNumber(val) {
+            if (val <= 0 || !isFinite(val)) return 100;
+            const exp = Math.floor(Math.log10(val));
+            const base = Math.pow(10, exp);
+            const frac = val / base;
+            let nice = 1;
+            if (frac >= 5) nice = 5;
+            else if (frac >= 2) nice = 2;
+            return nice * base;
+        }
+
+        function updateScaleBars() {
+            views.forEach((view, idx) => {
+                const hud = scaleBars[idx];
+                if (!hud) return;
+                const vw = Math.max(120, view.clientWidth || 240);
+                const fullGroundM = panelGroundWidthMeters(idx) / Math.max(0.5, state.scale);
+                const targetFraction = 72 / vw;
+                const targetMeters = fullGroundM * targetFraction;
+                const niceMeters = niceScaleNumber(targetMeters);
+                const barPx = Math.max(36, Math.min(110, Math.round((niceMeters / Math.max(1e-6, fullGroundM)) * vw)));
+                const halfPx = Math.max(18, Math.round(barPx / 2));
+                const label = niceMeters >= 1000
+                    ? `${(niceMeters / 1000).toFixed(niceMeters % 1000 === 0 ? 0 : 1)} km`
+                    : `${Math.round(niceMeters)} m`;
+                const segDark = hud.querySelector(".scale-seg-dark");
+                const segLight = hud.querySelector(".scale-seg-light");
+                const lblEl = hud.querySelector(".scale-bar-label");
+                if (segDark && segLight) {
+                    segDark.style.width = `${halfPx}px`;
+                    segLight.style.width = `${halfPx}px`;
+                }
+                if (lblEl) {
+                    lblEl.textContent = label;
+                }
+            });
+        }
+
         function clampState() {
             state.scale = Math.min(16, Math.max(0.5, state.scale));
             state.offsetX = Math.min(0, Math.max(1 - state.scale, state.offsetX));
@@ -449,6 +594,7 @@ __PANELS__
                 images[index].style.transform = `translate(${x}px, ${y}px) scale(${state.scale})`;
             });
             zoomReadout.textContent = `${Math.round(state.scale * 100)}%`;
+            updateScaleBars();
             drawMeasureSVGs();
         }
 
@@ -470,9 +616,20 @@ __PANELS__
             applyState();
         }
 
-        function calculateDistance(pt1, pt2) {
-            const dx = pt2.x - pt1.x;
-            const dy = pt2.y - pt1.y;
+        function calculateDistance(pt1, pt2, panelIdx) {
+            const data = panelData[panelIdx || 0] || panelData[0];
+            if (data && Array.isArray(data.extent_wgs84) && data.extent_wgs84.length === 4) {
+                const wgs = data.extent_wgs84;
+                if (Math.abs(wgs[0]) <= 180 && Math.abs(wgs[2]) <= 180 && Math.abs(wgs[1]) <= 90 && Math.abs(wgs[3]) <= 90) {
+                    const lon1 = wgs[0] + pt1.normX * (wgs[2] - wgs[0]);
+                    const lat1 = wgs[3] - pt1.normY * (wgs[3] - wgs[1]);
+                    const lon2 = wgs[0] + pt2.normX * (wgs[2] - wgs[0]);
+                    const lat2 = wgs[3] - pt2.normY * (wgs[3] - wgs[1]);
+                    return haversineMeters(lon1, lat1, lon2, lat2);
+                }
+            }
+            const dx = pt2.mapX - pt1.mapX;
+            const dy = pt2.mapY - pt1.mapY;
             return Math.sqrt(dx * dx + dy * dy);
         }
 
@@ -556,7 +713,7 @@ __PANELS__
                 if (measurePoints.length >= 2) {
                     let totalDist = 0;
                     for (let i = 1; i < measurePoints.length; i++) {
-                        totalDist += calculateDistance(measurePoints[i-1], measurePoints[i]);
+                        totalDist += calculateDistance(measurePoints[i-1], measurePoints[i], index);
                     }
                     const distStr = totalDist >= 1000 ? (totalDist/1000).toFixed(2) + " km" : totalDist.toFixed(1) + " m";
                     measureReadout.textContent = `Measure: ${distStr}`;
@@ -614,6 +771,26 @@ __PANELS__
 </html>
 """
 
+_NORTH_ARROW_SVG = (
+    '<div class="north-arrow-hud" title="North">'
+    '<svg viewBox="0 0 40 48" aria-hidden="true">'
+    '<text x="20" y="11" text-anchor="middle" font-size="10" font-weight="800" fill="currentColor">N</text>'
+    '<polygon points="20,14 11,42 20,35" fill="currentColor"/>'
+    '<polygon points="20,14 29,42 20,35" fill="#2a8f85"/>'
+    '</svg>'
+    '</div>'
+)
+
+_SCALE_BAR_HUD = (
+    '<div class="scale-bar-hud" title="Dynamic Ground Scale Bar">'
+    '<span class="scale-bar-label">100 m</span>'
+    '<div class="scale-bar-segments">'
+    '<span class="scale-seg-dark" style="width:24px;"></span>'
+    '<span class="scale-seg-light" style="width:24px;"></span>'
+    '</div>'
+    '</div>'
+)
+
 
 def _safe_script_json(value: object) -> str:
     """Serialize JSON without allowing user text to terminate the script tag."""
@@ -657,11 +834,10 @@ def build_dashboard_html(
         detail = html.escape(str(panel.get("detail", "QGIS map render")), quote=True)
         crs = str(panel.get("crs", "Unknown CRS"))
 
-        legend_html = ""
         legend_items = panel.get("legend")
+        item_htmls = []
         if isinstance(legend_items, list) and legend_items:
-            item_htmls = []
-            for item in legend_items[:8]:
+            for item in legend_items[:10]:
                 if isinstance(item, dict):
                     lbl = html.escape(str(item.get("label", "")), quote=True)
                     col = html.escape(str(item.get("color", "#2a8f85")), quote=True)
@@ -671,13 +847,20 @@ def build_dashboard_html(
                         f"                        <span>{lbl}</span>\n"
                         f"                    </div>"
                     )
-            if item_htmls:
-                legend_html = (
-                    "                <div class=\"mini-legend\">\n"
-                    "                    <div class=\"mini-legend-title\">Legend</div>\n"
-                    + "\n".join(item_htmls) + "\n"
-                    "                </div>\n"
-                )
+        if not item_htmls:
+            fallback_label = detail if detail and detail != "QGIS map render" else panel_title
+            item_htmls.append(
+                f"                    <div class=\"legend-item\">\n"
+                f"                        <span class=\"legend-swatch\" style=\"background-color: #2a8f85;\"></span>\n"
+                f"                        <span>{fallback_label}</span>\n"
+                f"                    </div>"
+            )
+        legend_html = (
+            "                <div class=\"mini-legend\">\n"
+            "                    <div class=\"mini-legend-title\">Legend</div>\n"
+            + "\n".join(item_htmls) + "\n"
+            "                </div>\n"
+        )
 
         detail_tooltip = html.escape(str(panel.get("detail_tooltip", detail)), quote=True)
         scale_str = html.escape(str(panel.get("scale", "")), quote=True)
@@ -696,7 +879,9 @@ def build_dashboard_html(
             "            </div>\n"
             f"            <div id=\"{panel_id}\" class=\"map-view\" aria-label=\"{panel_title}\">\n"
             f"                <img class=\"map-image\" src=\"{image_data}\" alt=\"{panel_title}\">\n"
+            f"                {_NORTH_ARROW_SVG}\n"
             f"{legend_html}"
+            f"                {_SCALE_BAR_HUD}\n"
             "                <span class=\"laser\"></span>\n"
             "            </div>\n"
             "        </section>"
@@ -704,7 +889,6 @@ def build_dashboard_html(
 
         extent_wgs84_val = panel.get("extent_wgs84", extent)
         script_data.append({"extent": extent, "extent_wgs84": extent_wgs84_val, "crs": crs})
-
 
     content = _DASHBOARD_TEMPLATE
     content = content.replace("__INITIAL_THEME__", safe_theme)

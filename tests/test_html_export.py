@@ -36,6 +36,29 @@ class DashboardHtmlTests(unittest.TestCase):
         self.assertIn("wheel", result)
         self.assertIn('class="opacity-slider"', result)
 
+    def test_eight_panel_export_contains_north_arrow_scale_bar_and_legend_for_every_panel(self) -> None:
+        panels_8 = [
+            {
+                "title": f"Panel {i + 1} · Scenario {i + 1}",
+                "detail": f"Layer {i + 1}",
+                "image_data": "data:image/png;base64,iVBORw0KGgo=",
+                "extent": [2900000, 5000000, 2902000, 5002000],
+                "extent_wgs84": [26.0, 40.0, 26.02, 40.02],
+                "crs": "EPSG:3857",
+                "legend": [{"label": f"Class {i + 1}", "color": "#2a8f85"}] if i % 2 == 0 else [],
+            }
+            for i in range(8)
+        ]
+        result = build_dashboard_html("8-Panel Comparison", 2, 4, panels_8)
+
+        self.assertEqual(result.count('class="map-view"'), 8)
+        self.assertEqual(result.count('class="north-arrow-hud"'), 8)
+        self.assertEqual(result.count('class="scale-bar-hud"'), 8)
+        self.assertEqual(result.count('class="mini-legend"'), 8)
+        self.assertIn('id="carto-btn"', result)
+        self.assertIn("updateScaleBars()", result)
+        self.assertIn('const themes = ["slate", "dark", "emerald"];', result)
+
     def test_supports_dashboard_themes(self) -> None:
         result_dark = build_dashboard_html("Dark Theme", 1, 1, [self.panel], theme="dark")
         self.assertIn('data-theme="dark"', result_dark)
@@ -46,14 +69,13 @@ class DashboardHtmlTests(unittest.TestCase):
     def test_supports_measurement_tool(self) -> None:
         result = build_dashboard_html("Measure Test", 1, 1, [self.panel])
         self.assertIn('id="measure-btn"', result)
-        self.assertIn('drawMeasureSVGs', result)
+        self.assertIn("drawMeasureSVGs", result)
+        self.assertIn("haversineMeters", result)
 
     def test_supports_presentation_mode_export(self) -> None:
         result = build_dashboard_html("Presentation Test", 1, 2, [self.panel, self.panel])
         self.assertIn('id="presentation-btn"', result)
-        self.assertIn('presentation-mode', result)
-
-
+        self.assertIn("presentation-mode", result)
 
     def test_escapes_script_terminators_in_crs_metadata(self) -> None:
         panel = dict(self.panel)

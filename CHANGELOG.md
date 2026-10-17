@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.0] - 2026-10-17
+
+### Fixed
+- **Missing North Arrow in Print Layout Exports (`print_layout.py`)**: Passing relative SVG keys such as `"arrows/NorthArrow_01.svg"` directly to `QgsLayoutItemPicture.setPicturePath()` left `isMissingImage() == True` during layout export. SVG paths are now resolved across `QgsApplication.svgPaths()` and backed by a bundled vector compass rose (`icons/north_arrow.svg`).
+- **Invisible / Zero-Width Scale Bar in Print Layout Exports (`print_layout.py`)**: Constructing `QgsLayoutItemScaleBar` without `applyDefaultSettings()` and `applyDefaultSize()` left `unitsPerSegment == 0.0`, drawing zero-width segments. Scale bars now compute true ellipsoidal ground width via `QgsDistanceArea`, auto-select meters (`< 2.5 km`) or kilometers (`>= 2.5 km`), and guarantee a positive cartographic segment size across all CRSs (`EPSG:4326`, `EPSG:3857`, `EPSG:5637`, UTM).
+- **Missing Legend in Print Layout & 8-Panel Exports (`print_layout.py`)**: Print exports previously omitted `QgsLayoutItemLegend` altogether. Added both a **Master Cartographic Footer** (North Arrow, multi-column `QgsLayoutItemLegend` filtered to panel layers, panel legend summary, and Scale Bar) and **Per-Panel Cartographic Stamps** (panel title header banner, mini North Arrow, mini Legend card, and mini Scale Bar on each of the 2–8 panels), plus aspect-ratio-safe `zoomToExtent` fitting for narrow `2x4` (8-panel) cells.
+- **HTML Dashboard Theme Toggle & Measurement Readout (`html_export.py`)**: Restored the `themes` state array for live theme cycling (`Slate`, `Dark`, `Emerald`), fixed `calculateDistance` coordinate property names (`mapX`/`mapY`), and added Haversine ground distance calculation using `extent_wgs84`.
+- **Panel Legend Overlay & Multi-Inspect (`dialog.py`)**: Fixed `_rebuild_legend_overlay` so the panel legend button (`🎨`) works in `Follow Main Map` and `Map Theme` modes as well as `Compare One Layer` mode, and supports `graduatedSymbol` (`ranges`) and `RuleRenderer` (`rootRule`). Updated `perform_multi_inspect` to use pixel-based tolerance and reproject query rectangles into each layer's CRS.
+
+### Added
+- **New 3D Isometric Studio Icon (`icons/icon.png`)**: Redesigned the plugin icon into a tactile 3D diorama featuring 4 synchronized GIS map panels connected by glowing cursor beacon pins and cyan light arcs atop a circular deep-teal pedestal.
+- **HTML Dashboard Cartographic HUD (`html_export.py`)**: Every panel in exported HTML dashboards now displays an embedded SVG North Arrow badge, a live zoom-responsive ground Scale Bar (`updateScaleBars()`), and a Legend card, toggleable via the new **🧭 Carto HUD** toolbar button.
+- **Saved User Presets Loader (`dialog.py`)**: User presets saved via `Save Current Setup...` are now automatically listed in the `Presets / Templates...` dropdown and restored on selection.
+
 ## [1.1.0] - 2026-09-20
 
 ### Fixed

@@ -278,8 +278,142 @@ def test_utm_data_keeps_its_values():
           abs(measured - 1_000_000.0) > 1.0, f"measured={measured:,.3f}")
 
 
+def test_eight_panel_print_layout_and_cartographic_elements():
+    """Verify 8-panel (2x4) Print Layout export includes visible North Arrow, Scale Bar, and Legend."""
+    import tempfile
+    from qgis.core import (
+        QgsGraduatedSymbolRenderer,
+        QgsLayoutExporter,
+        QgsLayoutItemLabel,
+        QgsLayoutItemLegend,
+        QgsLayoutItemMap,
+        QgsLayoutItemPicture,
+        QgsLayoutItemScaleBar,
+        QgsRendererRange,
+        QgsSymbol,
+    )
+    from zero2multimap.dialog import MapPanelWidget
+    from zero2multimap.print_layout import PrintLayoutDialog, resolve_north_arrow_svg
+
+    class DummyParentDialog:
+        def __init__(self, panels):
+            self.rows = 2
+            self.cols = 4
+            self.panels = panels
+
+        def styleSheet(self):
+            return ""
+
+    iface = StubIface()
+    panels = []
+    for i in range(8):
+        p = MapPanelWidget(i, iface)
+        crs_code = "EPSG:4326" if i % 2 == 1 else "EPSG:3857"
+        rect = QgsRectangle(26.0, 38.4, 26.2, 38.6) if crs_code == "EPSG:4326" else SQUARE_3857
+        lyr = make_layer(f"Scenario_{i + 1}", crs_code, rect)
+        if i == 0:
+            sym = QgsSymbol.defaultSymbol(lyr.geometryType())
+            rng = QgsRendererRange(0.0, 10.0, sym, "Low-Mid Density")
+            grad = QgsGraduatedSymbolRenderer("id", [rng])
+            lyr.setRenderer(grad)
+        p.canvas.setDestinationCrs(QgsCoordinateReferenceSystem(crs_code))
+        p.canvas.setExtent(rect)
+        p.canvas.setLayers([lyr])
+        panels.append(p)
+
+    # Also verify panel legend overlay works in sync/layer mode and with graduated renderer
+    panels[0]._rebuild_legend_overlay()
+    check(
+        "Panel 1 legend overlay builds for graduated renderer even in sync mode",
+        panels[0].legend_card is not None,
+    )
+    panels[0].update_hud(True)
+    check(
+        "Panel 1 HUD includes ground distance and scale ratio",
+        panels[0].hud_label is not None and ("m" in panels[0].hud_label.text() or "km" in panels[0].hud_label.text()),
+        f"hud={panels[0].hud_label.text() if panels[0].hud_label else None!r}",
+    )
+
+    parent_stub = DummyParentDialog(panels)
+    dlg = PrintLayoutDialog(parent_stub, iface)
+
+    for rel_key in ("builtin", "arrows/NorthArrow_01.svg", "arrows/NorthArrow_02.svg"):
+        resolved = resolve_north_arrow_svg(rel_key)
+        check(
+            f"North arrow key {rel_key!r} resolves to an existing SVG on disk",
+            os.path.isfile(resolved),
+            f"resolved={resolved!r}",
+        )
+
+    layout = dlg.build_qgis_print_layout(
+        title="8-Panel Urban Comparison",
+        page_size_name="A4",
+        orientation="Landscape",
+        north_arrow_key="arrows/NorthArrow_01.svg",
+        scalebar_style="Single Box",
+        include_footer=True,
+        per_panel_overlays=True,
+        include_headers=True,
+    )
+
+    items = layout.items()
+    map_items = [it for it in items if isinstance(it, QgsLayoutItemMap)]
+    pic_items = [it for it in items if isinstance(it, QgsLayoutItemPicture)]
+    sb_items = [it for it in items if isinstance(it, QgsLayoutItemScaleBar)]
+    leg_items = [it for it in items if isinstance(it, QgsLayoutItemLegend)]
+    lbl_items = [it for it in items if isinstance(it, QgsLayoutItemLabel)]
+
+    check("8-panel layout contains all 8 QgsLayoutItemMap items", len(map_items) == 8, f"got {len(map_items)}")
+    check(
+        "8-panel layout contains Master North Arrow + 8 Per-Panel North Arrows (9 total)",
+        len(pic_items) == 9,
+        f"got {len(pic_items)}",
+    )
+    check(
+        "every North Arrow picture resolves to a valid image (isMissingImage is False)",
+        all(not pic.isMissingImage() and os.path.isfile(pic.picturePath()) for pic in pic_items),
+        f"missing={[pic.picturePath() for pic in pic_items if pic.isMissingImage()]}",
+    )
+    check(
+        "8-panel layout contains Master Scale Bar + 8 Per-Panel Scale Bars (9 total)",
+        len(sb_items) == 9,
+        f"got {len(sb_items)}",
+    )
+    check(
+        "every Scale Bar has a positive non-zero unitsPerSegment (> 0)",
+        all(sb.unitsPerSegment() > 0 for sb in sb_items),
+        f"unitsPerSegment={[sb.unitsPerSegment() for sb in sb_items]}",
+    )
+    check(
+        "8-panel layout contains Master QgsLayoutItemLegend with all 8 layers",
+        len(leg_items) == 1 and len(leg_items[0].model().rootGroup().children()) == 8,
+        f"legends={len(leg_items)}",
+    )
+    panel_leg_labels = sorted(
+        [lbl for lbl in lbl_items if lbl.id().startswith("PanelLegend_")],
+        key=lambda x: x.id(),
+    )
+    check(
+        "8-panel layout contains all 8 Per-Panel Legend cards",
+        len(panel_leg_labels) == 8 and "Low-Mid Density" in panel_leg_labels[0].text(),
+        f"count={len(panel_leg_labels)} p1={panel_leg_labels[0].text() if panel_leg_labels else None!r}",
+    )
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out_png = os.path.join(tmpdir, "eight_panels.png")
+        exporter = QgsLayoutExporter(layout)
+        img_settings = QgsLayoutExporter.ImageExportSettings()
+        img_settings.dpi = 96
+        res = exporter.exportToImage(out_png, img_settings)
+        check(
+            "QgsLayoutExporter exports 8-panel layout to PNG cleanly",
+            res == QgsLayoutExporter.Success and os.path.isfile(out_png) and os.path.getsize(out_png) > 1024,
+            f"res={res} exists={os.path.isfile(out_png)}",
+        )
+
+
 def run():
-    print("02Multimap - CRS-aware spatial metrics (QGIS runtime)")
+    print("02Multimap - CRS-aware spatial metrics & 8-panel layout export (QGIS runtime)")
     print()
     test_ellipsoid_is_never_left_unset()
     test_web_mercator_area_is_not_inflated()
@@ -289,6 +423,7 @@ def run():
     test_comparison_still_detects_a_real_change()
     test_kpi_chip_carries_the_corrected_number()
     test_utm_data_keeps_its_values()
+    test_eight_panel_print_layout_and_cartographic_elements()
 
     print()
     failed = [r for r in RESULTS if not r[1]]

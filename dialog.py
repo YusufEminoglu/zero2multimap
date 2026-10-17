@@ -49,7 +49,12 @@ from qgis.core import (
     QgsPointXY,
 )
 from qgis.gui import QgsMapCanvas, QgsVertexMarker, QgsMapToolPan, QgsRubberBand
-from .print_layout import PrintLayoutDialog
+from .print_layout import (
+    PrintLayoutDialog,
+    extract_panel_legend_items,
+    _measure_extent_ground_width_m,
+    _nice_scale_segment,
+)
 from .spatial_metrics import (
     compare_layers,
     format_area,
@@ -362,8 +367,8 @@ class MapPanelWidget(QFrame):
             self.legend_card.deleteLater()
             self.legend_card = None
 
-        layer = self.selected_layer()
-        if not layer or not layer.isValid():
+        items = extract_panel_legend_items(self, max_items=8)
+        if not items:
             return
 
         self.legend_card = QFrame(self.canvas)
@@ -374,37 +379,24 @@ class MapPanelWidget(QFrame):
         card_layout.setContentsMargins(6, 4, 6, 4)
         card_layout.setSpacing(3)
 
-        title = QLabel(layer.name())
+        layer = self.selected_layer()
+        header_txt = layer.name() if layer and layer.isValid() else f"Panel {self.index + 1} Legend"
+        title = QLabel(header_txt)
         title.setStyleSheet("font-weight: bold; font-size: 10px; color: #2a8f85;")
         card_layout.addWidget(title)
 
-        if hasattr(layer, "renderer") and layer.renderer():
-            renderer = layer.renderer()
-            if hasattr(renderer, "categories"):
-                for cat in renderer.categories()[:5]:
-                    row = QHBoxLayout()
-                    row.setSpacing(4)
-                    box = QLabel()
-                    box.setFixedSize(10, 10)
-                    col = cat.symbol().color().name() if cat.symbol() else "#2a8f85"
-                    box.setStyleSheet(f"background-color: {col}; border: 1px solid #777; border-radius: 2px;")
-                    lbl = QLabel(cat.label() or str(cat.value()))
-                    lbl.setStyleSheet("font-size: 10px; color: #16323f;")
-                    row.addWidget(box)
-                    row.addWidget(lbl)
-                    card_layout.addLayout(row)
-            elif hasattr(renderer, "symbol") and renderer.symbol():
-                row = QHBoxLayout()
-                row.setSpacing(4)
-                box = QLabel()
-                box.setFixedSize(10, 10)
-                col = renderer.symbol().color().name()
-                box.setStyleSheet(f"background-color: {col}; border: 1px solid #777; border-radius: 2px;")
-                lbl = QLabel("Single Symbol")
-                lbl.setStyleSheet("font-size: 10px; color: #16323f;")
-                row.addWidget(box)
-                row.addWidget(lbl)
-                card_layout.addLayout(row)
+        for entry in items:
+            row = QHBoxLayout()
+            row.setSpacing(4)
+            box = QLabel()
+            box.setFixedSize(10, 10)
+            col = entry.get("color", "#2a8f85")
+            box.setStyleSheet(f"background-color: {col}; border: 1px solid #777; border-radius: 2px;")
+            lbl = QLabel(entry.get("label", ""))
+            lbl.setStyleSheet("font-size: 10px; color: #16323f;")
+            row.addWidget(box)
+            row.addWidget(lbl)
+            card_layout.addLayout(row)
 
         self.legend_card.setStyleSheet("""
             QFrame#LegendCard {
@@ -423,10 +415,13 @@ class MapPanelWidget(QFrame):
         """Open a small popup menu with a layer opacity slider."""
         layer = self.selected_layer()
         if not layer:
+            layers = self.canvas.layers()
+            layer = layers[0] if layers else None
+        if not layer:
             return
 
         menu = QMenu(self)
-        slider = QSlider(Qt.Horizontal)
+        slider = QSlider(get_orientation("Horizontal"))
         slider.setRange(10, 100)
         slider.setValue(int(layer.opacity() * 100))
         slider.setFixedWidth(120)
@@ -455,7 +450,7 @@ class MapPanelWidget(QFrame):
             pixmap.save(filepath)
 
     def update_hud(self, show_hud: bool = False) -> None:
-        """Update or render canvas HUD (North arrow and scale readout)."""
+        """Update or render canvas HUD (North arrow, dynamic ground scale bar, and scale ratio)."""
         if not show_hud:
             if self.hud_label:
                 self.hud_label.hide()
@@ -463,7 +458,7 @@ class MapPanelWidget(QFrame):
         if not self.hud_label:
             self.hud_label = QLabel(self.canvas)
             self.hud_label.setStyleSheet("""
-                background-color: rgba(22, 50, 63, 0.88);
+                background-color: rgba(22, 50, 63, 0.90);
                 color: #ffffff;
                 font-weight: bold;
                 font-size: 11px;
@@ -471,7 +466,12 @@ class MapPanelWidget(QFrame):
                 border-radius: 4px;
             """)
         scale_val = int(self.canvas.scale())
-        self.hud_label.setText(f"▲ N  |  1:{scale_val:,}")
+        ground_w = _measure_extent_ground_width_m(
+            self.canvas.extent(), self.canvas.mapSettings().destinationCrs()
+        )
+        seg_m = _nice_scale_segment(ground_w * 0.2)
+        dist_str = f"{seg_m / 1000.0:g} km" if seg_m >= 1000.0 else f"{int(round(seg_m))} m"
+        self.hud_label.setText(f"▲ N  |  ━━ {dist_str}  |  1:{scale_val:,}")
         self.hud_label.adjustSize()
         self.hud_label.move(10, 10)
         self.hud_label.show()
@@ -637,13 +637,7 @@ class MultiMapDialog(QDialog):
         setup_row.addWidget(self.base_layer_combo)
 
         self.preset_combo = QComboBox()
-        self.preset_combo.addItems([
-            "Presets / Templates...",
-            "Save Current Setup...",
-            "Template: Before & After (1x2)",
-            "Template: 4-Scenario Matrix (2x2)",
-            "Template: Temporal Timeline (1x3)",
-        ])
+        self._refresh_preset_combo()
         self.preset_combo.setToolTip("Save or load workspace comparison templates and presets.")
         self.preset_combo.currentTextChanged.connect(self._on_preset_selected)
         setup_row.addWidget(self.preset_combo)
@@ -1369,6 +1363,19 @@ class MultiMapDialog(QDialog):
 
     # ───────────────────────── Navigation Sync ─────────────────────────
 
+    def _refresh_live_overlays(self) -> None:
+        """Refresh HUD badges, KPI bars, legend drawer, and diff overlays if currently enabled."""
+        if hasattr(self, "hud_chk") and self.hud_chk.isChecked():
+            for p in self.panels:
+                p.update_hud(True)
+        if hasattr(self, "kpi_chk") and self.kpi_chk.isChecked():
+            for p in self.panels:
+                p.update_kpi_bar(True)
+        if hasattr(self, "drawer_frame") and self.drawer_frame.isVisible():
+            self.update_legend_drawer()
+        if hasattr(self, "diff_btn") and self.diff_btn.isChecked():
+            self.update_spatial_diff_highlights()
+
     def on_panel_extent_changed(self, trigger_panel: MapPanelWidget) -> None:
         """Synchronizes other panels when one is panned or zoomed."""
         if hasattr(self, "active_panel") and self.active_panel != trigger_panel:
@@ -1377,8 +1384,8 @@ class MultiMapDialog(QDialog):
             self.scale_readout.setText(f"Scale: 1:{int(trigger_panel.canvas.scale()):,}")
             self.update_extent_boxes()
 
-
         if self._is_syncing or not self.sync_extents_chk.isChecked():
+            self._refresh_live_overlays()
             return
 
         self._is_syncing = True
@@ -1401,6 +1408,7 @@ class MultiMapDialog(QDialog):
                 main_canvas.blockSignals(False)
         finally:
             self._is_syncing = False
+            self._refresh_live_overlays()
 
     def on_main_canvas_extent_changed(self) -> None:
         """Syncs all panels when main QGIS map canvas extent changes."""
@@ -1418,6 +1426,7 @@ class MultiMapDialog(QDialog):
             self.update_extent_boxes()
         finally:
             self._is_syncing = False
+            self._refresh_live_overlays()
 
     # ───────────────────────── Scale/Extent Alignment ─────────────────────────
 
@@ -1461,6 +1470,7 @@ class MultiMapDialog(QDialog):
             self.update_extent_boxes()
         finally:
             self._is_syncing = False
+            self._refresh_live_overlays()
 
     # ───────────────────────── Laser Crosshair ─────────────────────────
 
@@ -1504,29 +1514,56 @@ class MultiMapDialog(QDialog):
         if not hasattr(self, "inspect_btn") or not self.inspect_btn.isChecked():
             return
         map_point = source_panel.canvas.mapSettings().mapToPixel().toMapCoordinates(pos.x(), pos.y())
-        self.perform_multi_inspect(map_point)
+        self.perform_multi_inspect(map_point, source_panel=source_panel)
+
+    def _refresh_preset_combo(self) -> None:
+        """Populate built-in templates and user-saved presets from QSettings."""
+        if not hasattr(self, "preset_combo"):
+            return
+        self.preset_combo.blockSignals(True)
+        self.preset_combo.clear()
+        self.preset_combo.addItems([
+            "Presets / Templates...",
+            "Save Current Setup...",
+            "Template: Before & After (1x2)",
+            "Template: 4-Scenario Matrix (2x2)",
+            "Template: Temporal Timeline (1x3)",
+        ])
+        settings = QSettings()
+        settings.beginGroup("zero2multimap/presets")
+        for name in sorted(settings.childKeys()):
+            if name.strip():
+                self.preset_combo.addItem(f"Preset: {name.strip()}")
+        settings.endGroup()
+        self.preset_combo.setCurrentIndex(0)
+        self.preset_combo.blockSignals(False)
 
     def _on_preset_selected(self, preset_text: str) -> None:
         """Handle Preset selection from toolbar dropdown."""
+        if not preset_text or preset_text == "Presets / Templates...":
+            return
         if preset_text == "Save Current Setup...":
             self.save_workspace_preset()
-            self.preset_combo.blockSignals(True)
-            self.preset_combo.setCurrentIndex(0)
-            self.preset_combo.blockSignals(False)
         elif preset_text.startswith("Template: Before & After"):
             self.load_built_in_preset("before_after")
         elif preset_text.startswith("Template: 4-Scenario"):
             self.load_built_in_preset("matrix_2x2")
         elif preset_text.startswith("Template: Temporal"):
             self.load_built_in_preset("timeline_1x3")
+        elif preset_text.startswith("Preset: "):
+            self.load_saved_preset(preset_text[len("Preset: "):].strip())
+        self.preset_combo.blockSignals(True)
+        self.preset_combo.setCurrentIndex(0)
+        self.preset_combo.blockSignals(False)
 
     def save_workspace_preset(self) -> None:
         """Save current workspace layout and panel assignments to QSettings."""
         preset_name, ok = QInputDialog.getText(self, "Save Workspace Preset", "Preset Name:")
         if not ok or not preset_name.strip():
             return
+        clean_name = preset_name.strip()
         settings = QSettings()
-        key = f"zero2multimap/presets/{preset_name.strip()}"
+        key = f"zero2multimap/presets/{clean_name}"
         data = {
             "grid": self.grid_combo.currentText(),
             "base_layer": self.base_layer_combo.currentText(),
@@ -1538,10 +1575,40 @@ class MultiMapDialog(QDialog):
                     "scale": int(panel.canvas.scale()),
                 }
                 for panel in self.panels
-            ]
+            ],
         }
         settings.setValue(key, json.dumps(data))
-        QMessageBox.information(self, "Workspace Presets", f"Preset '{preset_name.strip()}' saved successfully!")
+        self._refresh_preset_combo()
+        QMessageBox.information(self, "Workspace Presets", f"Preset '{clean_name}' saved successfully!")
+
+    def load_saved_preset(self, preset_name: str) -> None:
+        """Restore a user-saved workspace preset from QSettings."""
+        raw = QSettings().value(f"zero2multimap/presets/{preset_name}", "")
+        if not raw:
+            return
+        with contextlib.suppress(Exception):
+            data = json.loads(str(raw))
+            grid_txt = data.get("grid")
+            if grid_txt and self.grid_combo.findText(grid_txt) >= 0:
+                self.grid_combo.setCurrentText(grid_txt)
+            base_txt = data.get("base_layer")
+            if base_txt and self.base_layer_combo.findText(base_txt) >= 0:
+                self.base_layer_combo.setCurrentText(base_txt)
+            for panel, p_cfg in zip(self.panels, data.get("panels", [])):
+                mode = p_cfg.get("mode", "sync")
+                if mode == "layer":
+                    panel.mode_combo.setCurrentText("Compare One Layer")
+                    lyr_txt = p_cfg.get("layer", "")
+                    if lyr_txt and panel.layer_combo.findText(lyr_txt) >= 0:
+                        panel.layer_combo.setCurrentText(lyr_txt)
+                elif mode == "theme":
+                    panel.mode_combo.setCurrentText("Map Theme")
+                    thm_txt = p_cfg.get("theme", "")
+                    if thm_txt and panel.theme_combo.findText(thm_txt) >= 0:
+                        panel.theme_combo.setCurrentText(thm_txt)
+                else:
+                    panel.mode_combo.setCurrentText("Follow Main Map")
+            self.status_label.setText(f"Loaded workspace preset: {preset_name}")
 
     def load_built_in_preset(self, preset_type: str) -> None:
         """Load one of the built-in scenario templates."""
@@ -1565,7 +1632,7 @@ class MultiMapDialog(QDialog):
             self.update_legend_drawer()
 
     def update_legend_drawer(self) -> None:
-        """Populate right-side drawer with all active panel legends."""
+        """Populate right-side drawer with all active panel legends (including graduated & rule-based)."""
         if not hasattr(self, "drawer_scroll_layout"):
             return
         for i in reversed(range(self.drawer_scroll_layout.count())):
@@ -1574,8 +1641,8 @@ class MultiMapDialog(QDialog):
                 item.widget().setParent(None)
 
         for panel in self.panels:
-            layers = panel.canvas.layers()
-            if not layers:
+            items = extract_panel_legend_items(panel, max_items=8)
+            if not items:
                 continue
             card = QFrame()
             card.setStyleSheet("background: #f8fafc; border: 1px solid #cbd3da; border-radius: 5px; padding: 4px;")
@@ -1586,27 +1653,12 @@ class MultiMapDialog(QDialog):
             title.setStyleSheet("font-size: 11px; color: #2a8f85;")
             card_l.addWidget(title)
 
-            for lyr in layers:
-                if not lyr or not lyr.isValid():
-                    continue
-                if isinstance(lyr, QgsVectorLayer) and lyr.renderer():
-                    renderer = lyr.renderer()
-                    if hasattr(renderer, "categories"):
-                        for cat in renderer.categories()[:5]:
-                            lbl = cat.label() or str(cat.value())
-                            col = cat.symbol().color().name() if cat.symbol() else "#2a8f85"
-                            row = QLabel(f"▪ {lyr.name()}: {lbl}")
-                            row.setStyleSheet(f"font-size: 10px; color: {col}; font-weight: bold;")
-                            card_l.addWidget(row)
-                    elif hasattr(renderer, "symbol") and renderer.symbol():
-                        col = renderer.symbol().color().name()
-                        row = QLabel(f"▪ {lyr.name()}")
-                        row.setStyleSheet(f"font-size: 10px; color: {col}; font-weight: bold;")
-                        card_l.addWidget(row)
-                elif isinstance(lyr, QgsRasterLayer):
-                    row = QLabel(f"▨ Raster: {lyr.name()}")
-                    row.setStyleSheet("font-size: 10px; color: #3498db; font-weight: bold;")
-                    card_l.addWidget(row)
+            for entry in items:
+                lbl = entry.get("label", "")
+                col = entry.get("color", "#2a8f85")
+                row = QLabel(f"▪ {lbl}")
+                row.setStyleSheet(f"font-size: 10px; color: {col}; font-weight: bold;")
+                card_l.addWidget(row)
             self.drawer_scroll_layout.addWidget(card)
 
     def _on_kpi_toggled(self, checked: bool) -> None:
@@ -1624,8 +1676,11 @@ class MultiMapDialog(QDialog):
         msg = "Multi-Inspect Active: Click any point on a map panel to query all panels." if checked else "Multi-Inspect Off"
         self.status_label.setText(msg)
 
-    def perform_multi_inspect(self, map_point: QgsPointXY) -> None:
+    def perform_multi_inspect(self, map_point: QgsPointXY, source_panel: MapPanelWidget | None = None) -> None:
         """Query vector attributes and raster cell values at map_point across all active panels."""
+        ref_panel = source_panel or self.active_panel or (self.panels[0] if self.panels else None)
+        source_crs = ref_panel.canvas.mapSettings().destinationCrs() if ref_panel else self.iface.mapCanvas().mapSettings().destinationCrs()
+
         lines = []
         for index, panel in enumerate(self.panels):
             p_name = f"Panel {index + 1}"
@@ -1634,11 +1689,37 @@ class MultiMapDialog(QDialog):
                 lines.append(f"<b>{p_name}:</b> No active layers")
                 continue
 
+            panel_crs = panel.canvas.mapSettings().destinationCrs()
+            mupp = max(1e-7, panel.canvas.mapUnitsPerPixel() or 1.0)
+            tol_panel = mupp * 6.0
+            pt_panel = map_point
+            if source_crs.isValid() and panel_crs.isValid() and source_crs != panel_crs:
+                with contextlib.suppress(QgsCsException, RuntimeError):
+                    ct_p = QgsCoordinateTransform(source_crs, panel_crs, QgsProject.instance())
+                    pt_panel = ct_p.transform(map_point)
+
+            rect_panel = QgsRectangle(
+                pt_panel.x() - tol_panel,
+                pt_panel.y() - tol_panel,
+                pt_panel.x() + tol_panel,
+                pt_panel.y() + tol_panel,
+            )
+
             p_info = []
-            rect = QgsRectangle(map_point.x() - 5, map_point.y() - 5, map_point.x() + 5, map_point.y() + 5)
             for lyr in layers:
+                if not lyr or not lyr.isValid():
+                    continue
+                lyr_crs = lyr.crs()
+                query_rect = rect_panel
+                query_pt = pt_panel
+                if panel_crs.isValid() and lyr_crs.isValid() and panel_crs != lyr_crs:
+                    with contextlib.suppress(QgsCsException, RuntimeError):
+                        ct_l = QgsCoordinateTransform(panel_crs, lyr_crs, QgsProject.instance())
+                        query_rect = ct_l.transformBoundingBox(rect_panel)
+                        query_pt = ct_l.transform(pt_panel)
+
                 if isinstance(lyr, QgsVectorLayer):
-                    req = QgsFeatureRequest().setFilterRect(rect)
+                    req = QgsFeatureRequest().setFilterRect(query_rect)
                     feats = list(lyr.getFeatures(req))
                     if feats:
                         f = feats[0]
@@ -1647,7 +1728,7 @@ class MultiMapDialog(QDialog):
                         p_info.append(f"{lyr.name()} ({f_info})")
                 elif isinstance(lyr, QgsRasterLayer):
                     with contextlib.suppress(Exception):
-                        val, ok = lyr.dataProvider().sample(map_point, 1)
+                        val, ok = lyr.dataProvider().sample(query_pt, 1)
                         if ok:
                             p_info.append(f"{lyr.name()} (Val: {val:.2f})")
 
@@ -1658,7 +1739,7 @@ class MultiMapDialog(QDialog):
         QMessageBox.information(
             self,
             "Multi-Panel Feature Inspector 🎯",
-            f"<b>Coordinate:</b> {map_point.x():.2f}, {map_point.y():.2f}<br><br>{msg}"
+            f"<b>Coordinate:</b> {map_point.x():.4f}, {map_point.y():.4f}<br><br>{msg}"
         )
 
     def _on_diff_toggled(self, checked: bool) -> None:
@@ -1784,6 +1865,10 @@ class MultiMapDialog(QDialog):
     # ───────────────────────── Window Close ─────────────────────────
 
     def closeEvent(self, event) -> None:
+        if hasattr(self, "timeline_timer") and self.timeline_timer.isActive():
+            self.timeline_timer.stop()
+            if hasattr(self, "player_btn"):
+                self.player_btn.setText("▶ Play Timeline")
         self.clear_extent_boxes()
         for panel in self.panels:
             panel.marker.hide()
