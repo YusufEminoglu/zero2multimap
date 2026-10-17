@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.1] - 2026-10-17
+
+### Changed
+- **Clean Unobscured Comparison Viewports (`dialog.py`)**: Removed the translucent blue/teal `QgsRubberBand` extent overlay that tinted all non-active panels whenever a panel was selected. Active panel selection is indicated strictly by the `#2a8f85` card frame border (`QFrame#MapPanel[active="true"]`), keeping every comparison canvas unobscured.
+
 ## [1.2.0] - 2026-10-17
 
 ### Fixed

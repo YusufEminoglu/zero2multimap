@@ -679,10 +679,6 @@ class MultiMapDialog(QDialog):
         self.laser_chk.setChecked(True)
         navigation_row.addWidget(self.laser_chk)
 
-        self.extent_box_chk = QCheckBox("Extent Box")
-        self.extent_box_chk.setChecked(True)
-        navigation_row.addWidget(self.extent_box_chk)
-
         self.kpi_chk = QCheckBox("Viewport KPIs")
         self.kpi_chk.setToolTip(
             "Show real-time polygon area (ha/km²) and feature count chips under each panel.\n"
@@ -1312,7 +1308,7 @@ class MultiMapDialog(QDialog):
     # ───────────────────────── Extent Bounding Box ─────────────────────────
 
     def clear_extent_boxes(self) -> None:
-        """Hide and delete all rubberband extent boxes."""
+        """Hide and delete any rubberband extent boxes."""
         for rb in list(self.rubber_bands.values()):
             if rb:
                 with contextlib.suppress(Exception):
@@ -1320,46 +1316,11 @@ class MultiMapDialog(QDialog):
         self.rubber_bands.clear()
 
     def update_extent_boxes(self) -> None:
-        """Draw active panel's extent box overlay across all other viewports."""
-        if not self.extent_box_chk.isChecked() or not self.active_panel:
-            self.clear_extent_boxes()
-            return
-
-        source_extent = self.active_panel.canvas.extent()
-        source_crs = self.active_panel.canvas.mapSettings().destinationCrs()
-
-        polygon_geom_type = getattr(QgsWkbTypes, "PolygonGeometry", QgsWkbTypes.PolygonGeometry)
-
-        for panel in self.panels:
-            if panel == self.active_panel:
-                if panel in self.rubber_bands and self.rubber_bands[panel]:
-                    self.rubber_bands[panel].hide()
-                continue
-
-            if panel not in self.rubber_bands or self.rubber_bands[panel] is None:
-                rb = QgsRubberBand(panel.canvas, polygon_geom_type)
-                rb.setColor(QColor(42, 143, 133, 40))
-                rb.setStrokeColor(QColor(42, 143, 133, 220))
-                rb.setWidth(2)
-                self.rubber_bands[panel] = rb
-
-            rb = self.rubber_bands[panel]
-            dest_crs = panel.canvas.mapSettings().destinationCrs()
-            transformed_extent = source_extent
-            if source_crs.isValid() and dest_crs.isValid() and source_crs != dest_crs:
-                with contextlib.suppress(QgsCsException, RuntimeError):
-                    ct = QgsCoordinateTransform(source_crs, dest_crs, QgsProject.instance())
-                    transformed_extent = ct.transformBoundingBox(source_extent)
-
-            geom = QgsGeometry.fromRect(transformed_extent)
-            rb.setToGeometry(geom, None)
-            rb.show()
+        """Keep non-active viewports free of rubberband tint overlays; active panel frame border indicates selection."""
+        self.clear_extent_boxes()
 
     def _on_extent_box_toggled(self, checked: bool) -> None:
-        if checked:
-            self.update_extent_boxes()
-        else:
-            self.clear_extent_boxes()
+        self.clear_extent_boxes()
 
     # ───────────────────────── Navigation Sync ─────────────────────────
 

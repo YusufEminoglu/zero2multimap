@@ -3,7 +3,7 @@ name=02Multimap: Sync-up Map Layers
 qgisMinimumVersion=3.40
 qgisMaximumVersion=4.99
 description=Smart multi-panel layer comparison with synchronized canvases, extent bounding boxes, multi-panel feature inspector, live extent KPIs, legend drawer, scale presets, and offline HTML dashboards.
-version=1.2.0
+version=1.2.1
 author=Yusuf Eminoglu
 email=yusuf.eminoglu@deu.edu.tr
 
@@ -11,7 +11,7 @@ about=02Multimap is an advanced, high-performance workspace plugin designed for 
     
     Key Capabilities:
     1. Synchronized Viewport Grids: Rebuild your workspace into 2, 3, 4, 6, or 8 synchronized map canvases (in horizontal, vertical, or grid matrices).
-    2. Dynamic Extent Bounding Box: Overlay the active viewport rectangle over all other viewports to visualize geographic context immediately.
+    2. Clean Active Panel Framing: Active viewport is highlighted strictly by its frame border without tinting or obscuring non-active comparison panels.
     3. Multi-Panel Feature Inspector: Query vector attributes and raster cell values at any coordinate point across all active viewports simultaneously.
     4. Visual Spatial Difference Engine: Compute geometric differences between comparison layers with green (added) and red (removed) overlays.
     5. Viewport Spatial KPIs & Area Chips: Calculate real-time polygon areas (ha/km²) and feature counts beneath each panel card. Areas are measured on the ellipsoid, so the readout is the same true ground area whether the layer is stored in a geographic CRS, in Web Mercator, or in a local projected CRS.
@@ -34,6 +34,7 @@ hasProcessingProvider=no
 license=GPL-3
 
 changelog=
+    1.2.1 - Remove the blue/teal QgsRubberBand highlight overlay that tinted non-active panels; the selected panel is now distinguished cleanly by its active frame border alone.
     1.2.0 - Fix missing North Arrow, Scale Bar, and Legend in multi-panel (including 8-panel 2x4) Print Layout and HTML Dashboard exports, redesign the 3D isometric studio icon, and enhance live workspace tools:
     - Print Layout North Arrow Fix: Resolve relative QGIS SVG paths against QgsApplication.svgPaths() and bundle a high-contrast vector compass rose (icons/north_arrow.svg) so North Arrows never render blank.
     - Print Layout Scale Bar Fix: Initialize QgsLayoutItemScaleBar with applyDefaultSettings, applyDefaultSize, and ellipsoidal ground-width segment sizing so unitsPerSegment is never zero in EPSG:4326, EPSG:3857, or projected CRSs.
