@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Eminoglu"
+    given-names: "Yusuf"
+    email: "yusuf.eminoglu@deu.edu.tr"
+    orcid: "https://orcid.org/0009-0005-6000-2934"
+title: "02Multimap: Sync-up Map Layers"
+version: "1.2.1"
+doi: "10.5281/zenodo.23673847"
+date-released: "2026-10-17"
+url: "https://github.com/YusufEminoglu/zero2multimap"
+abstract: "Smart multi-panel layer comparison with synchronized canvases, extent bounding boxes, multi-panel feature inspector, live extent KPIs, legend drawer, scale presets, and offline HTML dashboards."
