@@ -8,7 +8,7 @@
 
 [![QGIS](https://img.shields.io/badge/QGIS-3.40%2B%20%7C%204.x-93b023?logo=qgis&logoColor=white)](https://plugins.qgis.org/plugins/zero2multimap/)
 [![Version](https://img.shields.io/github/v/tag/YusufEminoglu/zero2multimap?label=version&color=blue)](https://gitlab.com/geophilo1/zero2multimap/releases)
-[![License](https://img.shields.io/badge/license-GPL--3.0-orange)](LICENSE)
+[![License](https://img.shields.io/badge/license-GPL--3.0--or--later-orange)](LICENSE)
 [![Web Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blueviolet?logo=github&logoColor=white)](https://geophilo.com/zero2multimap/)
 
 <img src="docs/hero.png" width="800" alt="02Multimap in action"/>
@@ -86,4 +86,4 @@ Requires QGIS 3.40 or newer and is ready for QGIS 4.x.
 
 ## 📜 License & author
 
-GPL-3.0 © [Yusuf Eminoğlu](https://github.com/YusufEminoglu) — bug reports and feature requests welcome in [Issues](https://gitlab.com/geophilo1/zero2multimap/-/issues).
+GPL-3.0-or-later © [Yusuf Eminoğlu](https://github.com/YusufEminoglu) — bug reports and feature requests welcome in [Issues](https://gitlab.com/geophilo1/zero2multimap/-/issues).

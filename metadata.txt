@@ -31,8 +31,7 @@ icon=icons/icon.png
 experimental=False
 deprecated=False
 hasProcessingProvider=no
-license=GPL-3
-
+license=GPL-3.0-or-later
 changelog=
     1.2.1 - Remove the blue/teal QgsRubberBand highlight overlay that tinted non-active panels; the selected panel is now distinguished cleanly by its active frame border alone.
     1.2.0 - Fix missing North Arrow, Scale Bar, and Legend in multi-panel (including 8-panel 2x4) Print Layout and HTML Dashboard exports, redesign the 3D isometric studio icon, and enhance live workspace tools:
