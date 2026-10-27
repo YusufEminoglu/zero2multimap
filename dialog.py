@@ -1895,8 +1895,8 @@ class QuickGuideDialog(QDialog):
             
             <div style="background-color: #eef1f4; border: 1px solid #cbd3da; border-radius: 6px; padding: 10px; margin-bottom: 12px;">
                 <b>🌐 Online User Manual & Detailed Documentation:</b><br>
-                <a href="https://yusufeminoglu.github.io/zero2multimap/" style="color: #2a8f85; font-weight: bold; text-decoration: underline;">
-                    https://yusufeminoglu.github.io/zero2multimap/
+                <a href="https://geophilo.com/zero2multimap/" style="color: #2a8f85; font-weight: bold; text-decoration: underline;">
+                    https://geophilo.com/zero2multimap/
                 </a>
             </div>
 

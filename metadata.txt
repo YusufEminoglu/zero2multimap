@@ -2,30 +2,22 @@
 name=02Multimap - Synchronized Map Views
 qgisMinimumVersion=3.40
 qgisMaximumVersion=4.99
-description=Smart multi-panel layer comparison with synchronized canvases, extent bounding boxes, multi-panel feature inspector, live extent KPIs, legend drawer, scale presets, and offline HTML dashboards.
+description=Compare maps side by side in 2 to 8 synchronized panels: before/after and scenario layouts, cross-panel feature inspection, change overlays, true-area readouts and offline HTML dashboards.
 version=1.2.1
 author=Geophilo
 email=yusuf.eminoglu@deu.edu.tr
 
-about=02Multimap is an advanced, high-performance workspace plugin designed for comparative spatial analysis and multi-scenario map visualization. Ideal for urban planners, environmental researchers, and demographers, it allows you to compare multiple spatial patterns side-by-side in a coordinated layout. Online User Manual & Documentation: https://geophilo.com/zero2multimap/ | If you find this plugin helpful, please consider starring the repository on GitLab (https://gitlab.com/geophilo1/zero2multimap)!
-    
-    Key Capabilities:
-    1. Synchronized Viewport Grids: Rebuild your workspace into 2, 3, 4, 6, or 8 synchronized map canvases (in horizontal, vertical, or grid matrices).
-    2. Clean Active Panel Framing: Active viewport is highlighted strictly by its frame border without tinting or obscuring non-active comparison panels.
-    3. Multi-Panel Feature Inspector: Query vector attributes and raster cell values at any coordinate point across all active viewports simultaneously.
-    4. Visual Spatial Difference Engine: Compute geometric differences between comparison layers with green (added) and red (removed) overlays.
-    5. Viewport Spatial KPIs & Area Chips: Calculate real-time polygon areas (ha/km²) and feature counts beneath each panel card. Areas are measured on the ellipsoid, so the readout is the same true ground area whether the layer is stored in a geographic CRS, in Web Mercator, or in a local projected CRS.
-    6. Workspace Presets & Templates: Save and restore custom comparison layouts or use built-in scenario templates (Before & After, 4-Scenario Matrix, Temporal Timeline).
-    7. Unified Legend Drawer & Canvas HUD: Access a right-side drawer stacking all panel legends and overlay North arrow / scale graphics on canvas corners.
-    8. Synchronized Measurement Tool: Measure distance and area interactively across viewports in QGIS and exported HTML dashboards.
-    9. Professional Print Layouts & Multi-Theme HTML Dashboards: Export exact panel rendering to print layouts (PDF, PNG, JPG, SVG) and self-contained HTML files featuring North Arrows, dynamic ground Scale Bars, multi-layer and per-panel Legends across 2 to 8 panels, Slate Light, Dark Midnight, and Emerald Clean themes, presentation slide mode, opacity controls, and measurement tools.
+about=02Multimap splits the QGIS map into 2, 3, 4, 6 or 8 panels that pan and zoom together, so scenarios, years or indicators can be read side by side instead of toggled on and off.
+    Click once to inspect vector attributes and raster values at the same point in every panel. A difference view marks what was added in green and removed in red. Each panel shows its feature count and polygon area, measured on the ellipsoid so the figure is true ground area in any CRS. Ready templates (Before and After, 4-Scenario Matrix, Temporal Timeline), saved workspaces, a shared legend drawer and synchronized measuring keep comparisons consistent.
+    Export the panels to a print layout or to a self-contained HTML dashboard with legends, scale bars, three themes and a slide mode.
+    Manual: https://geophilo.com/zero2multimap/manual.html
 
 tracker=https://gitlab.com/geophilo1/zero2multimap/-/issues
 repository=https://gitlab.com/geophilo1/zero2multimap
 homepage=https://geophilo.com/zero2multimap/
 
 category=Vector
-tags=02-multimap,zero2multimap,qgis,dialog,multi-map,comparison,sync,demographics
+tags=multi-map,comparison,sync,side by side,before after,scenario comparison,synchronized canvas,dashboard,change detection,geophilo
 icon=icons/icon.png
 
 experimental=False
