@@ -3,7 +3,7 @@ name=02Multimap - Synchronized Map Views
 qgisMinimumVersion=3.40
 qgisMaximumVersion=4.99
 description=Compare maps side by side in 2 to 8 synchronized panels: before/after and scenario layouts, cross-panel feature inspection, change overlays, true-area readouts and offline HTML dashboards.
-version=1.2.1
+version=1.2.2
 author=Geophilo
 email=yusuf.eminoglu@deu.edu.tr
 
