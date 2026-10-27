@@ -1,10 +1,10 @@
 [general]
-name=02Multimap: Sync-up Map Layers
+name=02Multimap - Synchronized Map Views
 qgisMinimumVersion=3.40
 qgisMaximumVersion=4.99
 description=Smart multi-panel layer comparison with synchronized canvases, extent bounding boxes, multi-panel feature inspector, live extent KPIs, legend drawer, scale presets, and offline HTML dashboards.
 version=1.2.1
-author=Yusuf Eminoglu
+author=Geophilo
 email=yusuf.eminoglu@deu.edu.tr
 
 about=02Multimap is an advanced, high-performance workspace plugin designed for comparative spatial analysis and multi-scenario map visualization. Ideal for urban planners, environmental researchers, and demographers, it allows you to compare multiple spatial patterns side-by-side in a coordinated layout. Online User Manual & Documentation: https://geophilo.com/zero2multimap/ | If you find this plugin helpful, please consider starring the repository on GitLab (https://gitlab.com/geophilo1/zero2multimap)!
