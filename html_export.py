@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import json
+import math
 from collections.abc import Mapping, Sequence
 
 
@@ -30,6 +31,7 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             --card-shadow: rgba(22, 50, 63, 0.1);
             --hud-bg: rgba(255, 255, 255, 0.92);
             --hud-ink: #16323f;
+            --measure: #a84f00;
         }
         [data-theme="dark"] {
             color-scheme: dark;
@@ -45,6 +47,7 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             --card-shadow: rgba(0, 0, 0, 0.4);
             --hud-bg: rgba(15, 23, 42, 0.90);
             --hud-ink: #f0f4f8;
+            --measure: #fbbf24;
         }
         [data-theme="emerald"] {
             --ink: #064e3b;
@@ -59,6 +62,7 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             --card-shadow: rgba(4, 120, 87, 0.12);
             --hud-bg: rgba(255, 255, 255, 0.92);
             --hud-ink: #064e3b;
+            --measure: #9a3412;
         }
         * { box-sizing: border-box; }
         html, body { width: 100%; height: 100%; margin: 0; }
@@ -366,7 +370,7 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             color: var(--muted);
             font-size: 11px;
         }
-        #measure-readout { color: #e67e22; font-weight: 700; font-family: Consolas, monospace; }
+        #measure-readout { color: var(--measure); font-weight: 700; font-family: Consolas, monospace; }
         #coordinates { color: var(--accent); font-family: Consolas, monospace; font-weight: 700; }
         .grid.presentation-mode {
             display: flex;
@@ -401,7 +405,7 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
         <div class="heading">
             <h1>__TITLE__</h1>
             <div class="subtitle">
-                02Multimap export · exact QGIS panel rendering · synchronized navigation, north arrow, scale bar, legend & laser cursor
+                Exported from QGIS with 02Multimap · panels pan and zoom together · north arrow, scale bar and legend on every panel
             </div>
         </div>
         <div class="toolbar" aria-label="Map navigation">
@@ -410,7 +414,7 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
             <button id="zoom-in" type="button" title="Zoom in">+</button>
             <button id="reset-view" type="button" class="btn-accent">Reset View</button>
             <button id="carto-btn" type="button" class="active" title="Toggle North Arrow, Scale Bar & Legend Overlays">🧭 Carto HUD</button>
-            <button id="measure-btn" type="button" title="Toggle measurement tool">📏 Measure</button>
+            <button id="measure-btn" type="button" title="Measure distance: click points on a map; click again to stop">📏 Measure</button>
             <button id="presentation-btn" type="button" title="Toggle presentation slide mode">📺 Presentation</button>
             <button id="theme-toggle" type="button" title="Toggle color theme">🌓 Theme</button>
         </div>
@@ -420,13 +424,171 @@ _DASHBOARD_TEMPLATE = """<!DOCTYPE html>
 __PANELS__
     </main>
     <footer>
-        <span id="help-text">Drag or scroll wheel in any panel to navigate in sync. Double-click to reset.</span>
+        <span id="help-text">Drag or use the mouse wheel in any panel; the others follow. Double-click to reset.</span>
         <span id="measure-readout"></span>
         <span id="coordinates">Cursor: —</span>
     </footer>
     <script>
         "use strict";
         const panelData = __PANEL_DATA__;
+
+        // <geometry> Pure functions without DOM access; the test suite runs this block on its own.
+        // Each panel image is drawn with object-fit: contain, so it fills a centred content
+        // rectangle inside its view and leaves empty bands (letterboxing) on two sides.
+        function contentRect(viewW, viewH, imgW, imgH) {
+            if (!(viewW > 0) || !(viewH > 0) || !(imgW > 0) || !(imgH > 0)) {
+                return { x: 0, y: 0, w: Math.max(1, viewW || 0), h: Math.max(1, viewH || 0) };
+            }
+            const fit = Math.min(viewW / imgW, viewH / imgH);
+            const w = imgW * fit;
+            const h = imgH * fit;
+            return { x: (viewW - w) / 2, y: (viewH - h) / 2, w: w, h: h };
+        }
+
+        // View pixel -> image position (u, v from 0 to 1), undoing pan/zoom and letterboxing.
+        function viewToImage(px, py, viewW, viewH, imgW, imgH, view) {
+            const box = contentRect(viewW, viewH, imgW, imgH);
+            const lx = (px - view.offsetX * viewW) / view.scale;
+            const ly = (py - view.offsetY * viewH) / view.scale;
+            return { u: (lx - box.x) / box.w, v: (ly - box.y) / box.h };
+        }
+
+        function imageToView(u, v, viewW, viewH, imgW, imgH, view) {
+            const box = contentRect(viewW, viewH, imgW, imgH);
+            return {
+                x: (box.x + u * box.w) * view.scale + view.offsetX * viewW,
+                y: (box.y + v * box.h) * view.scale + view.offsetY * viewH
+            };
+        }
+
+        function insideImage(p) {
+            return p.u >= 0 && p.u <= 1 && p.v >= 0 && p.v <= 1;
+        }
+
+        // The image shows exactly `extent` (xmin, ymin, xmax, ymax) in the panel's CRS.
+        function imageToMap(u, v, extent) {
+            return {
+                x: extent[0] + u * (extent[2] - extent[0]),
+                y: extent[3] - v * (extent[3] - extent[1])
+            };
+        }
+
+        function mapToImage(x, y, extent) {
+            return {
+                u: (x - extent[0]) / (extent[2] - extent[0]),
+                v: (extent[3] - y) / (extent[3] - extent[1])
+            };
+        }
+
+        // Longitude/latitude by bilinear interpolation in a grid computed by QGIS at export.
+        function imageToLonLat(u, v, grid) {
+            if (!grid || !(grid.n >= 2) || !Array.isArray(grid.points) || grid.points.length !== grid.n * grid.n) {
+                return null;
+            }
+            const n = grid.n;
+            const gx = Math.min(n - 1, Math.max(0, u * (n - 1)));
+            const gy = Math.min(n - 1, Math.max(0, v * (n - 1)));
+            const c0 = Math.min(n - 2, Math.floor(gx));
+            const r0 = Math.min(n - 2, Math.floor(gy));
+            const fx = gx - c0;
+            const fy = gy - r0;
+            const a = grid.points[r0 * n + c0];
+            const b = grid.points[r0 * n + c0 + 1];
+            const c = grid.points[(r0 + 1) * n + c0];
+            const d = grid.points[(r0 + 1) * n + c0 + 1];
+            return {
+                lon: (a[0] * (1 - fx) + b[0] * fx) * (1 - fy) + (c[0] * (1 - fx) + d[0] * fx) * fy,
+                lat: (a[1] * (1 - fx) + b[1] * fx) * (1 - fy) + (c[1] * (1 - fx) + d[1] * fx) * fy
+            };
+        }
+
+        function haversineMeters(lon1, lat1, lon2, lat2) {
+            const R = 6371008.8;
+            const toRad = Math.PI / 180.0;
+            const dLat = (lat2 - lat1) * toRad;
+            const dLon = (lon2 - lon1) * toRad;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+        }
+
+        // Distance on the WGS 84 ellipsoid (Vincenty's inverse formula); haversine as a fallback.
+        function geodesicMeters(lon1, lat1, lon2, lat2) {
+            const a = 6378137.0;
+            const f = 1 / 298.257223563;
+            const b = a * (1 - f);
+            const rad = Math.PI / 180;
+            const L = (lon2 - lon1) * rad;
+            const U1 = Math.atan((1 - f) * Math.tan(lat1 * rad));
+            const U2 = Math.atan((1 - f) * Math.tan(lat2 * rad));
+            const sinU1 = Math.sin(U1), cosU1 = Math.cos(U1);
+            const sinU2 = Math.sin(U2), cosU2 = Math.cos(U2);
+            let lambda = L;
+            let previous = 0;
+            let iterations = 0;
+            let sinSigma = 0, cosSigma = 0, sigma = 0, cosSqAlpha = 0, cos2SigmaM = 0;
+            do {
+                const sinLambda = Math.sin(lambda);
+                const cosLambda = Math.cos(lambda);
+                const t1 = cosU2 * sinLambda;
+                const t2 = cosU1 * sinU2 - sinU1 * cosU2 * cosLambda;
+                sinSigma = Math.sqrt(t1 * t1 + t2 * t2);
+                if (sinSigma === 0) return 0;
+                cosSigma = sinU1 * sinU2 + cosU1 * cosU2 * cosLambda;
+                sigma = Math.atan2(sinSigma, cosSigma);
+                const sinAlpha = cosU1 * cosU2 * sinLambda / sinSigma;
+                cosSqAlpha = 1 - sinAlpha * sinAlpha;
+                cos2SigmaM = cosSqAlpha !== 0 ? cosSigma - 2 * sinU1 * sinU2 / cosSqAlpha : 0;
+                const C = f / 16 * cosSqAlpha * (4 + f * (4 - 3 * cosSqAlpha));
+                previous = lambda;
+                lambda = L + (1 - C) * f * sinAlpha *
+                    (sigma + C * sinSigma * (cos2SigmaM + C * cosSigma * (-1 + 2 * cos2SigmaM * cos2SigmaM)));
+                iterations += 1;
+            } while (Math.abs(lambda - previous) > 1e-12 && iterations < 200);
+            if (iterations >= 200) return haversineMeters(lon1, lat1, lon2, lat2);
+            const uSq = cosSqAlpha * (a * a - b * b) / (b * b);
+            const A = 1 + uSq / 16384 * (4096 + uSq * (-768 + uSq * (320 - 175 * uSq)));
+            const B = uSq / 1024 * (256 + uSq * (-128 + uSq * (74 - 47 * uSq)));
+            const deltaSigma = B * sinSigma * (cos2SigmaM + B / 4 * (cosSigma * (-1 + 2 * cos2SigmaM * cos2SigmaM) -
+                B / 6 * cos2SigmaM * (-3 + 4 * sinSigma * sinSigma) * (-3 + 4 * cos2SigmaM * cos2SigmaM)));
+            return b * A * (sigma - deltaSigma);
+        }
+
+        // Ground distance between two described points (see describePoint); NaN if unknown.
+        function segmentMeters(p1, p2) {
+            if (p1.lonlat && p2.lonlat) {
+                return geodesicMeters(p1.lonlat.lon, p1.lonlat.lat, p2.lonlat.lon, p2.lonlat.lat);
+            }
+            if (p1.crs === p2.crs && p1.unitM > 0) {
+                return Math.hypot(p2.x - p1.x, p2.y - p1.y) * p1.unitM;
+            }
+            return NaN;
+        }
+
+        // Ground metres per screen pixel along the image's horizontal centre line.
+        function metersPerScreenPixel(viewW, viewH, imgW, imgH, groundWidthM, scale) {
+            const box = contentRect(viewW, viewH, imgW, imgH);
+            return groundWidthM / (box.w * scale);
+        }
+
+        function niceScaleNumber(val) {
+            if (!(val > 0) || !isFinite(val)) return 0;
+            const exp = Math.floor(Math.log10(val));
+            const base = Math.pow(10, exp);
+            const frac = val / base;
+            const nice = frac >= 5 ? 5 : (frac >= 2 ? 2 : 1);
+            return Number((nice * base).toPrecision(6));
+        }
+
+        function formatDistance(m) {
+            if (!isFinite(m)) return "—";
+            if (m < 1000) return `${m.toFixed(1)} m`;
+            if (m < 10000) return `${(m / 1000).toFixed(3)} km`;
+            return `${(m / 1000).toFixed(2)} km`;
+        }
+        // </geometry>
+
         const views = Array.from(document.querySelectorAll(".map-view"));
         const images = Array.from(document.querySelectorAll(".map-image"));
         const lasers = Array.from(document.querySelectorAll(".laser"));
@@ -498,11 +660,9 @@ __PANELS__
             isMeasuring = !isMeasuring;
             measureBtn.classList.toggle("active", isMeasuring);
             views.forEach(v => v.classList.toggle("measuring", isMeasuring));
-            if (!isMeasuring) {
-                measurePoints = [];
-                measureReadout.textContent = "";
-                drawMeasureSVGs();
-            }
+            measurePoints = [];
+            measureReadout.textContent = isMeasuring ? "Distance: click points on a map" : "";
+            drawMeasureSVGs();
         });
 
         document.querySelectorAll(".opacity-slider").forEach((slider, idx) => {
@@ -513,69 +673,69 @@ __PANELS__
             });
         });
 
-        function haversineMeters(lon1, lat1, lon2, lat2) {
-            const R = 6371008.8;
-            const toRad = Math.PI / 180.0;
-            const dLat = (lat2 - lat1) * toRad;
-            const dLon = (lon2 - lon1) * toRad;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                      Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) *
-                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+        function imageSize(index) {
+            const data = panelData[index] || {};
+            const size = data.image_size;
+            if (Array.isArray(size) && size[0] > 0 && size[1] > 0) return { w: size[0], h: size[1] };
+            const img = images[index];
+            if (img && img.naturalWidth > 0 && img.naturalHeight > 0) return { w: img.naturalWidth, h: img.naturalHeight };
+            return null;
         }
 
-        function panelGroundWidthMeters(index) {
-            const data = panelData[index] || panelData[0];
-            if (!data) return 1000;
-            const wgs = data.extent_wgs84;
-            if (Array.isArray(wgs) && wgs.length === 4 && Math.abs(wgs[0]) <= 180 && Math.abs(wgs[2]) <= 180 && Math.abs(wgs[1]) <= 90 && Math.abs(wgs[3]) <= 90) {
-                const midLat = 0.5 * (wgs[1] + wgs[3]);
-                const d = haversineMeters(wgs[0], midLat, wgs[2], midLat);
-                if (d > 0.01) return d;
-            }
-            const ext = data.extent || [0, 0, 1000, 1000];
-            const rawW = Math.abs(ext[2] - ext[0]);
-            if (String(data.crs || "").toUpperCase().includes("4326")) {
-                const midLat = 0.5 * (ext[1] + ext[3]);
-                return haversineMeters(ext[0], midLat, ext[2], midLat);
-            }
-            return rawW > 0 ? rawW : 1000;
+        function pointerToImage(index, clientX, clientY) {
+            const rect = views[index].getBoundingClientRect();
+            const img = imageSize(index) || { w: rect.width, h: rect.height };
+            return viewToImage(clientX - rect.left, clientY - rect.top, rect.width, rect.height, img.w, img.h, state);
         }
 
-        function niceScaleNumber(val) {
-            if (val <= 0 || !isFinite(val)) return 100;
-            const exp = Math.floor(Math.log10(val));
-            const base = Math.pow(10, exp);
-            const frac = val / base;
-            let nice = 1;
-            if (frac >= 5) nice = 5;
-            else if (frac >= 2) nice = 2;
-            return nice * base;
+        function describePoint(index, uv) {
+            const data = panelData[index];
+            const xy = imageToMap(uv.u, uv.v, data.extent);
+            return {
+                u: uv.u, v: uv.v, x: xy.x, y: xy.y, crs: data.crs,
+                unitM: Number(data.map_unit_m) || 0,
+                lonlat: imageToLonLat(uv.u, uv.v, data.lonlat_grid)
+            };
+        }
+
+        // Where a described point lies in panel `index`: the same map position when the
+        // panel uses the same CRS, otherwise the same image position.
+        function placeOnPanel(index, point) {
+            const data = panelData[index];
+            const view = views[index];
+            let uv = { u: point.u, v: point.v };
+            if (data && data.crs === point.crs) uv = mapToImage(point.x, point.y, data.extent);
+            const img = imageSize(index) || { w: view.clientWidth, h: view.clientHeight };
+            const spot = imageToView(uv.u, uv.v, view.clientWidth, view.clientHeight, img.w, img.h, state);
+            return { x: spot.x, y: spot.y, inside: insideImage(uv) };
         }
 
         function updateScaleBars() {
             views.forEach((view, idx) => {
                 const hud = scaleBars[idx];
                 if (!hud) return;
-                const vw = Math.max(120, view.clientWidth || 240);
-                const fullGroundM = panelGroundWidthMeters(idx) / Math.max(0.5, state.scale);
-                const targetFraction = 72 / vw;
-                const targetMeters = fullGroundM * targetFraction;
-                const niceMeters = niceScaleNumber(targetMeters);
-                const barPx = Math.max(36, Math.min(110, Math.round((niceMeters / Math.max(1e-6, fullGroundM)) * vw)));
-                const halfPx = Math.max(18, Math.round(barPx / 2));
-                const label = niceMeters >= 1000
-                    ? `${(niceMeters / 1000).toFixed(niceMeters % 1000 === 0 ? 0 : 1)} km`
-                    : `${Math.round(niceMeters)} m`;
+                const data = panelData[idx] || {};
+                const img = imageSize(idx);
+                const groundW = Number(data.ground_width_m);
+                const viewW = view.clientWidth;
+                const viewH = view.clientHeight;
+                if (!(viewW > 0) || !(viewH > 0) || !img || !(groundW > 0)) {
+                    hud.style.visibility = "hidden";
+                    return;
+                }
+                const metersPerPx = metersPerScreenPixel(viewW, viewH, img.w, img.h, groundW, state.scale);
+                const meters = niceScaleNumber(72 * metersPerPx);
+                const barPx = meters / metersPerPx;
+                hud.style.visibility = "visible";
                 const segDark = hud.querySelector(".scale-seg-dark");
                 const segLight = hud.querySelector(".scale-seg-light");
                 const lblEl = hud.querySelector(".scale-bar-label");
                 if (segDark && segLight) {
-                    segDark.style.width = `${halfPx}px`;
-                    segLight.style.width = `${halfPx}px`;
+                    segDark.style.width = `${(barPx / 2).toFixed(2)}px`;
+                    segLight.style.width = `${(barPx / 2).toFixed(2)}px`;
                 }
                 if (lblEl) {
-                    lblEl.textContent = label;
+                    lblEl.textContent = meters >= 1000 ? `${Number((meters / 1000).toPrecision(6))} km` : `${meters} m`;
                 }
             });
         }
@@ -616,25 +776,22 @@ __PANELS__
             applyState();
         }
 
-        function calculateDistance(pt1, pt2, panelIdx) {
-            const data = panelData[panelIdx || 0] || panelData[0];
-            if (data && Array.isArray(data.extent_wgs84) && data.extent_wgs84.length === 4) {
-                const wgs = data.extent_wgs84;
-                if (Math.abs(wgs[0]) <= 180 && Math.abs(wgs[2]) <= 180 && Math.abs(wgs[1]) <= 90 && Math.abs(wgs[3]) <= 90) {
-                    const lon1 = wgs[0] + pt1.normX * (wgs[2] - wgs[0]);
-                    const lat1 = wgs[3] - pt1.normY * (wgs[3] - wgs[1]);
-                    const lon2 = wgs[0] + pt2.normX * (wgs[2] - wgs[0]);
-                    const lat2 = wgs[3] - pt2.normY * (wgs[3] - wgs[1]);
-                    return haversineMeters(lon1, lat1, lon2, lat2);
-                }
+        function updateMeasureReadout() {
+            if (measurePoints.length < 2) {
+                measureReadout.textContent = "Distance: click the next point";
+                return;
             }
-            const dx = pt2.mapX - pt1.mapX;
-            const dy = pt2.mapY - pt1.mapY;
-            return Math.sqrt(dx * dx + dy * dy);
+            let total = 0;
+            for (let i = 1; i < measurePoints.length; i++) {
+                total += segmentMeters(measurePoints[i - 1], measurePoints[i]);
+            }
+            measureReadout.textContent = isFinite(total)
+                ? `Distance: ${formatDistance(total)}`
+                : "Distance: not available for this coordinate system";
         }
 
         function drawMeasureSVGs() {
-            views.forEach((view) => {
+            views.forEach((view, index) => {
                 let svg = view.querySelector("svg.measure-svg");
                 if (!svg) {
                     svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -642,23 +799,23 @@ __PANELS__
                     view.appendChild(svg);
                 }
                 svg.innerHTML = "";
-                if (measurePoints.length < 2) return;
+                if (measurePoints.length < 1) return;
 
                 let pathData = "";
                 measurePoints.forEach((pt, i) => {
-                    const screenX = (pt.normX * state.scale + state.offsetX) * view.clientWidth;
-                    const screenY = (pt.normY * state.scale + state.offsetY) * view.clientHeight;
-                    pathData += (i === 0 ? "M " : "L ") + screenX + " " + screenY + " ";
+                    const spot = placeOnPanel(index, pt);
+                    pathData += (i === 0 ? "M " : "L ") + spot.x + " " + spot.y + " ";
 
                     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                    circle.setAttribute("cx", screenX);
-                    circle.setAttribute("cy", screenY);
+                    circle.setAttribute("cx", spot.x);
+                    circle.setAttribute("cy", spot.y);
                     circle.setAttribute("r", "4");
                     circle.setAttribute("fill", "#e67e22");
                     circle.setAttribute("stroke", "#ffffff");
                     circle.setAttribute("stroke-width", "1.5");
                     svg.appendChild(circle);
                 });
+                if (measurePoints.length < 2) return;
 
                 const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
                 path.setAttribute("d", pathData);
@@ -671,23 +828,26 @@ __PANELS__
         }
 
         function showLaser(sourceIndex, clientX, clientY) {
-            const source = views[sourceIndex];
-            const rect = source.getBoundingClientRect();
-            const screenX = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-            const screenY = Math.min(1, Math.max(0, (clientY - rect.top) / rect.height));
-            lasers.forEach((laser) => {
-                laser.style.left = `${screenX * 100}%`;
-                laser.style.top = `${screenY * 100}%`;
+            const data = panelData[sourceIndex];
+            const uv = pointerToImage(sourceIndex, clientX, clientY);
+            if (!data || !insideImage(uv)) {
+                lasers.forEach((laser) => { laser.style.display = "none"; });
+                coordinateReadout.textContent = "Cursor: outside the map";
+                return;
+            }
+            const point = describePoint(sourceIndex, uv);
+            lasers.forEach((laser, idx) => {
+                const spot = placeOnPanel(idx, point);
+                if (!spot.inside) {
+                    laser.style.display = "none";
+                    return;
+                }
+                laser.style.left = `${spot.x}px`;
+                laser.style.top = `${spot.y}px`;
                 laser.style.display = "block";
             });
-
-            const data = panelData[sourceIndex];
-            const mapX = (screenX - state.offsetX) / state.scale;
-            const mapY = (screenY - state.offsetY) / state.scale;
-            const x = data.extent[0] + mapX * (data.extent[2] - data.extent[0]);
-            const y = data.extent[3] - mapY * (data.extent[3] - data.extent[1]);
-            const digits = Math.max(Math.abs(x), Math.abs(y)) >= 1000 ? 2 : 6;
-            coordinateReadout.textContent = `Cursor: ${x.toFixed(digits)}, ${y.toFixed(digits)} · ${data.crs}`;
+            const digits = Math.max(Math.abs(point.x), Math.abs(point.y)) >= 1000 ? 2 : 6;
+            coordinateReadout.textContent = `Cursor: ${point.x.toFixed(digits)}, ${point.y.toFixed(digits)} · ${data.crs}`;
         }
 
         function hideLasers() {
@@ -698,26 +858,10 @@ __PANELS__
         views.forEach((view, index) => {
             view.addEventListener("click", (event) => {
                 if (!isMeasuring) return;
-                const rect = view.getBoundingClientRect();
-                const screenX = (event.clientX - rect.left) / rect.width;
-                const screenY = (event.clientY - rect.top) / rect.height;
-                const normX = (screenX - state.offsetX) / state.scale;
-                const normY = (screenY - state.offsetY) / state.scale;
-
-                const data = panelData[index];
-                const mapX = data.extent[0] + normX * (data.extent[2] - data.extent[0]);
-                const mapY = data.extent[3] - normY * (data.extent[3] - data.extent[1]);
-
-                measurePoints.push({ normX, normY, mapX, mapY });
-
-                if (measurePoints.length >= 2) {
-                    let totalDist = 0;
-                    for (let i = 1; i < measurePoints.length; i++) {
-                        totalDist += calculateDistance(measurePoints[i-1], measurePoints[i], index);
-                    }
-                    const distStr = totalDist >= 1000 ? (totalDist/1000).toFixed(2) + " km" : totalDist.toFixed(1) + " m";
-                    measureReadout.textContent = `Measure: ${distStr}`;
-                }
+                const uv = pointerToImage(index, event.clientX, event.clientY);
+                if (!insideImage(uv) || !panelData[index]) return;
+                measurePoints.push(describePoint(index, uv));
+                updateMeasureReadout();
                 drawMeasureSVGs();
             });
 
@@ -782,7 +926,7 @@ _NORTH_ARROW_SVG = (
 )
 
 _SCALE_BAR_HUD = (
-    '<div class="scale-bar-hud" title="Dynamic Ground Scale Bar">'
+    '<div class="scale-bar-hud" title="Scale bar (ground distance at the centre of the map)">'
     '<span class="scale-bar-label">100 m</span>'
     '<div class="scale-bar-segments">'
     '<span class="scale-seg-dark" style="width:24px;"></span>'
@@ -800,6 +944,47 @@ def _safe_script_json(value: object) -> str:
         .replace("<", "\\u003c")
         .replace(">", "\\u003e")
     )
+
+
+def _positive_number(value: object) -> float | None:
+    """A finite number above zero, or ``None``."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    number = float(value)
+    return number if math.isfinite(number) and number > 0 else None
+
+
+def _positive_pair(value: object) -> list[float] | None:
+    """``[width, height]`` with both values finite and above zero, or ``None``."""
+    if not isinstance(value, (list, tuple)) or len(value) != 2:
+        return None
+    pair = [_positive_number(item) for item in value]
+    return pair if None not in pair else None
+
+
+def _lonlat_grid(value: object) -> dict | None:
+    """A ``{"n": n, "points": [[lon, lat], ...]}`` grid of n x n finite WGS 84 points, or ``None``."""
+    if not isinstance(value, Mapping):
+        return None
+    size = value.get("n")
+    points = value.get("points")
+    if isinstance(size, bool) or not isinstance(size, int) or size < 2 or not isinstance(points, (list, tuple)):
+        return None
+    if len(points) != size * size:
+        return None
+    clean = []
+    for point in points:
+        if not isinstance(point, (list, tuple)) or len(point) != 2:
+            return None
+        lon, lat = point
+        if isinstance(lon, bool) or isinstance(lat, bool) or not isinstance(lon, (int, float)) \
+                or not isinstance(lat, (int, float)):
+            return None
+        lon, lat = float(lon), float(lat)
+        if not (math.isfinite(lon) and math.isfinite(lat) and -360.0 <= lon <= 360.0 and -90.0 <= lat <= 90.0):
+            return None
+        clean.append([lon, lat])
+    return {"n": size, "points": clean}
 
 
 def build_dashboard_html(
@@ -888,7 +1073,15 @@ def build_dashboard_html(
         )
 
         extent_wgs84_val = panel.get("extent_wgs84", extent)
-        script_data.append({"extent": extent, "extent_wgs84": extent_wgs84_val, "crs": crs})
+        script_data.append({
+            "extent": extent,
+            "extent_wgs84": extent_wgs84_val,
+            "crs": crs,
+            "image_size": _positive_pair(panel.get("image_size")),
+            "ground_width_m": _positive_number(panel.get("ground_width_m")),
+            "lonlat_grid": _lonlat_grid(panel.get("lonlat_grid")),
+            "map_unit_m": _positive_number(panel.get("map_unit_m")),
+        })
 
     content = _DASHBOARD_TEMPLATE
     content = content.replace("__INITIAL_THEME__", safe_theme)

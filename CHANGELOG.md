@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.3.0] - 2026-11-02
+
+### Added
+- **Swipe layout.** Choose **Swipe (bottom / top)** to see one layer set over another in a single map. The top set shows on one side of a divider that you drag; the divider can stand upright or lie flat. The swipe map pans and zooms with the other maps like any panel. Print layouts, the Layout Designer and the HTML dashboard show a swipe as the bottom and the top layers side by side, at the swipe map's extent and scale.
+- **Open in Layout Designer.** The Export dialog adds the print layout to the project's Layout Manager under a unique name (a second copy becomes "… (2)") and opens it in the QGIS Layout Designer for editing.
+- **Plugins menu entry.** 02Multimap now also appears under `Plugins → 02Multimap`, next to its toolbar icon.
+- **The panel setup is saved with the project** and restored when the project is opened. Restoring a setup or a preset never moves the main QGIS map: with Sync Canvas on, the panels follow the main map; with it off, the panels take the saved scale.
+
+### Changed
+- Panels now share their centre, scale and rotation instead of copying map rectangles, and the centre is converted between coordinate systems.
+- The window fits a 1,280 × 680 laptop screen with four panels; with eight panels it scrolls instead of growing.
+- The Export dialog follows the QGIS theme (light, dark, Night Mapping) instead of copying the workspace window's light colours.
+- The HTML dashboard measures distance on the WGS 84 ellipsoid and shows it with more precision (for example "2.249 km").
+- Bug reports now go to GitHub issues (the old GitLab tracker address could not be opened).
+
+### Fixed
+- **Panels drifted out.** Each pan between a panel and the main map zoomed everything out (1:75,000 became 1:3.4 million after five rounds). Resizing the window, dragging a splitter or changing the grid also moved the main map, and a CRS change sent panels to the wrong place. Scale and position now hold, and QGIS's own scale box stays current.
+- **A closed window kept working.** After closing or unloading, hidden panels still redrew on every pan of the main map, and reloading the plugin added duplicate actions. Closing now stops all work; adding many layers to a project no longer slows QGIS down while the window is closed.
+- **Multi-Inspect reported the wrong feature** near holes and corners, because it tested bounding boxes. It now reports the feature under the cursor and shows layer names and values as plain text.
+- **Area and difference readouts.** Area chips no longer add the shared background to a panel's area, count points instead of showing "0 ha", say why nothing was measured, and update when a panel's layer changes. Show Diff explains why it cannot compare a raster or the background. Live overlays wait until panning stops.
+- **Templates and presets.** Before & After assigns two different layers, 4-Scenario Matrix assigns four, and time-series auto-fill finds years in names such as `landuse_2015` and reports what it assigned. Presets keep map themes and the scale.
+- **Smaller fixes.** Unticking Laser Crosshair removes the markers; the scale readout stays current; text in the window reaches at least 4.5:1 contrast with the built-in themes.
+- **Print layout.** The legend's text was 16 pt because its style was changed on a copy; legend text is now 6.5 pt (smaller only when needed) with compact spacing, and the legend fits the footer. The title, panel headers, panel legends and the footer summary now fit their boxes on A4, A3 and Letter in both orientations; long names end with "…". Panel legend cards list the classes without repeating the layer name, and panel scale bars stay inside their maps.
+- **HTML dashboard.** Cursor coordinates, distance measuring and the scale bar were calculated over the whole panel instead of the map image inside it, so in panels with empty bands beside or above the image a measured distance could read a quarter to a third short. They now use the image's own area. The dashboard measures distance only; the Export dialog no longer mentions area measuring.
+- **Export dialog.** Text was dark on dark in QGIS 4 dark mode (1.5:1); every label now reaches at least 4.5:1 contrast with the system theme, a dark theme and Night Mapping. "&" no longer disappears from labels ("Export & Open"). A failed export now says what went wrong and what to try instead of "Exporter code: 3".
+- **Documentation.** The description no longer mentions a synchronized measuring tool or an extent box that the plugin does not have; the README no longer shows a mock-up image or claims complete end-to-end verification, and its links to related plugins point to their own repositories. The laser crosshair is described as it works: in the other panels, and on the main map only with Sync Canvas on.
+- **Export and guide windows** are deleted after use instead of staying hidden under the QGIS main window.
+
 ## [1.2.2] - 2026-10-27
 
 - Hub listing text rewritten; author Geophilo; university affiliation removed; documentation links use the standard geophilo.com pages (manual.html, guide/); manual HTML no longer ships in the plugin package.

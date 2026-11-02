@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -70,7 +72,7 @@ class DashboardHtmlTests(unittest.TestCase):
         result = build_dashboard_html("Measure Test", 1, 1, [self.panel])
         self.assertIn('id="measure-btn"', result)
         self.assertIn("drawMeasureSVGs", result)
-        self.assertIn("haversineMeters", result)
+        self.assertIn("geodesicMeters", result)
 
     def test_supports_presentation_mode_export(self) -> None:
         result = build_dashboard_html("Presentation Test", 1, 2, [self.panel, self.panel])
@@ -85,6 +87,64 @@ class DashboardHtmlTests(unittest.TestCase):
 
         self.assertNotIn("</script><script>alert(1)</script>", result)
         self.assertIn("\\u003c/script\\u003e", result)
+
+    def _panel_data(self, result: str) -> list:
+        return json.loads(re.search(r"const panelData = (.*?);\n", result).group(1))
+
+    def test_passes_letterbox_and_ground_data_to_the_browser(self) -> None:
+        panel = dict(self.panel)
+        panel.update({
+            "image_size": [980, 592],
+            "ground_width_m": 2264.5,
+            "lonlat_grid": {"n": 2, "points": [[26.0, 41.0], [26.1, 41.0], [26.0, 40.9], [26.1, 40.9]]},
+            "map_unit_m": 1.0,
+        })
+        data = self._panel_data(build_dashboard_html("Data", 1, 1, [panel]))[0]
+
+        self.assertEqual(data["image_size"], [980.0, 592.0])
+        self.assertEqual(data["ground_width_m"], 2264.5)
+        self.assertEqual(data["lonlat_grid"]["n"], 2)
+        self.assertEqual(data["lonlat_grid"]["points"][3], [26.1, 40.9])
+        self.assertEqual(data["map_unit_m"], 1.0)
+
+    def test_drops_invalid_letterbox_and_ground_data(self) -> None:
+        panel = dict(self.panel)
+        panel.update({
+            "image_size": [0, 592],
+            "ground_width_m": float("nan"),
+            "lonlat_grid": {"n": 3, "points": [[26.0, 41.0]]},
+            "map_unit_m": True,
+        })
+        data = self._panel_data(build_dashboard_html("Data", 1, 1, [panel]))[0]
+
+        self.assertIsNone(data["image_size"])
+        self.assertIsNone(data["ground_width_m"])
+        self.assertIsNone(data["lonlat_grid"])
+        self.assertIsNone(data["map_unit_m"])
+        raw = re.search(r"const panelData = (.*?);\n", build_dashboard_html("Data", 1, 1, [panel])).group(1)
+        self.assertNotIn("NaN", raw)
+
+    def test_positions_use_the_image_content_rectangle(self) -> None:
+        """object-fit: contain letterboxes the image; readouts must map through its content box."""
+        result = build_dashboard_html("Geometry", 1, 1, [self.panel])
+        geometry = result.split("// <geometry>", 1)[1].split("// </geometry>", 1)[0]
+
+        self.assertIn("object-fit: contain", result)
+        self.assertIn("Math.min(viewW / imgW, viewH / imgH)", geometry)
+        for name in ("contentRect", "viewToImage", "imageToMap", "imageToLonLat", "geodesicMeters",
+                     "metersPerScreenPixel"):
+            self.assertIn(f"function {name}(", geometry)
+        self.assertNotIn("document", geometry)
+        script = result.split("// </geometry>", 1)[1]
+        self.assertIn("pointerToImage(index, event.clientX, event.clientY)", script)
+        self.assertIn("metersPerScreenPixel(viewW, viewH, img.w, img.h, groundW, state.scale)", script)
+
+    def test_measures_distance_only(self) -> None:
+        result = build_dashboard_html("Measure", 1, 1, [self.panel])
+        visible = re.sub(r'src="data:[^"]+"', "", result)
+
+        self.assertIn("Distance: ", visible)
+        self.assertIsNone(re.search(r"\barea\b", visible, re.IGNORECASE))
 
     def test_rejects_grid_panel_mismatch(self) -> None:
         with self.assertRaises(ValueError):

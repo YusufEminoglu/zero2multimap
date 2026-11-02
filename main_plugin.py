@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """02Multimap — main plugin class.
 
-Toolbar-only integration: a single launch icon, no top-level QGIS menu.
+One launch action, shown as a toolbar icon and as an entry in the Plugins
+menu. Unloading removes both and tears the workspace dialog down completely:
+signals disconnected, canvases released, widgets deleted.
 """
 from __future__ import annotations
 
@@ -12,6 +14,8 @@ try:
     from qgis.PyQt.QtWidgets import QAction
 except ImportError:
     from qgis.PyQt.QtGui import QAction
+
+MENU_NAME = "&02Multimap"
 
 
 class O2MultiMapPlugin:
@@ -31,16 +35,27 @@ class O2MultiMapPlugin:
         self.action.setStatusTip("Open multi-panel synchronized map viewer workspace.")
         self.action.triggered.connect(self.show_dialog)
 
-        # Add to standard toolbar
         self.iface.addToolBarIcon(self.action)
+        add_to_menu = getattr(self.iface, "addPluginToMenu", None)
+        if callable(add_to_menu):
+            add_to_menu(MENU_NAME, self.action)
 
     def unload(self) -> None:
-        if self.action:
-            self.iface.removeToolBarIcon(self.action)
-            self.action = None
-        if self.dialog:
-            self.dialog.close()
-            self.dialog = None
+        if self.dialog is not None:
+            dialog, self.dialog = self.dialog, None
+            dialog.cleanup()
+            dialog.close()
+            dialog.setParent(None)
+            dialog.deleteLater()
+        if self.action is not None:
+            action, self.action = self.action, None
+            self.iface.removeToolBarIcon(action)
+            remove_from_menu = getattr(self.iface, "removePluginMenu", None)
+            if callable(remove_from_menu):
+                remove_from_menu(MENU_NAME, action)
+            action.triggered.disconnect(self.show_dialog)
+            action.setParent(None)
+            action.deleteLater()
 
     # ───────────────────────── Dialog lifecycle ─────────────────────────
 

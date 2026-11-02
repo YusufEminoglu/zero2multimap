@@ -1,73 +1,59 @@
-# Roadmap & Future Features — 02Multimap
+# Roadmap — 02Multimap
 
-This document outlines planned improvements, future feature additions, and technical milestones for **02Multimap: Sync-up Map Layers**, aligning it with the wider **PlanX / 02viz** urban analytics ecosystem.
+This document lists what 02Multimap does today and what may come next. Ideas move into a release when there is measured demand for them.
 
 ---
 
-## 📅 Roadmap Overview
+## Releases
 
 ```mermaid
 timeline
-    title 02Multimap Release Milestones
-    v0.1.x : Core Multi-Panel Sync : Resizable Grid Splitters : Print Exporter
-    v0.2.x : Extent-aware Panel Auto-Fill : Clear One-Layer Comparison UX : Offline Exact-Render HTML Dashboard
-    v0.3.x (Current) : Extent Bounding Box Overlay : Quick Panel Tools (Zoom, Opacity, Snapshot) : Multi-Theme HTML Dashboards & Dark Mode : Scale Presets
-    v0.4.x (Medium-term) : 3D Map Viewport Synchronization : Dynamic Legend Bindings : Raster Band/Stretch Syncing
-    v1.0.x (Long-term) : Web Hosting Integration (GitHub Pages) : Bivariate/LISA Side-by-Side Visualizations
+    title 02Multimap releases
+    v0.1–v0.6 : Linked panel grids : Print layouts : Offline HTML dashboards : Multi-Inspect, Show Diff, legend drawer
+    v1.0–v1.2 : Ellipsoidal area readouts : North arrow, legend and scale bar in exports
+    v1.3 (current) : Swipe layout : Centre, scale and rotation sync across CRSs : Panel setup saved with the project : Exports fixed (layout text fit, Layout Designer, HTML measuring)
+    Next : Temporal controller sync
+    Ideas : 3D view sync : Raster band and stretch sync : Dashboard hosting
 ```
 
 ---
 
-## 🛠️ Planned Features & Specifications
+## Current: 1.3
 
-### 1. Short-Term Enhancements (v0.2 - v0.3)
+- **Swipe layout**: one map, a bottom layer set everywhere and a top layer set on one side of a draggable divider, upright or flat.
+- **Sync that holds**: panels share centre, scale and rotation; the centre is converted between coordinate systems; resizing and grid changes do not move other maps.
+- **Project and presets**: the panel setup is saved in the QGIS project; presets keep map themes and the scale.
+- **Exports**: print layout text is fitted to its boxes, the layout can be opened in the Layout Designer, and the HTML dashboard measures distances on the WGS 84 ellipsoid.
 
-#### A. Temporal Time-Series Synchronization
-- **Goal**: Synchronize temporal layer settings across map canvases for time-series analysis (e.g., comparing years 2000, 2010, 2020 side-by-side).
-- **Implementation**: Connect with QGIS `QgsTemporalController` to dynamically set different temporal ranges/timestamps for each viewport card based on selected dates.
-
-#### B. Minimap & Overview Extent Box Indicators
-- **Goal**: Allow viewports operating at different zoom scales to project bounding boxes representing the extents of other panels.
-- **Implementation**: Draw a dynamic bounding box rectangle overlay on the main viewport representing the bounding coordinates of zoomed-in focus viewports.
-
-#### C. Premium Interactive HTML Dashboard Themes
-- **Goal**: Provide alternative visual style layouts for the exported HTML pages.
-- **Implementation**: Add dropdown layouts in the Print Exporter:
-  - **Dark Slate theme**: A premium night-themed Leaflet style.
-  - **Analytics Sidebar Layout**: An interactive sidebar layout containing a layer list toggler, project metadata description, and stats readouts.
+See [CHANGELOG.md](CHANGELOG.md) for the full list.
 
 ---
 
-### 2. Medium-Term Enhancements (v0.4 - v0.5)
+## Next
 
-#### A. 3D Viewport Coordination
-- **Goal**: Co-align QGIS 3D Map Views with 2D comparative map viewports.
-- **Implementation**: Automatically query active `Qgs3DMapCanvas` views and synchronize their center camera targets and pitch/yaw rotation angles to mirror changes made on the active 2D panels.
-
-#### B. Viewport-Specific Legend Cards
-- **Goal**: Include legend graphics matching the locked themes or active layers inside the header of each individual panel card.
-- **Implementation**: Add expandable QFrame boxes displaying raster color scales or vector categories inside each map widget.
-
-#### C. Raster Band & Stretch Syncing
-- **Goal**: Dynamically link raster rendering parameters (contrast stretch, color bands, min/max clip) across viewports.
-- **Implementation**: Add sync controls for raster data comparison (e.g., comparing different band combinations like False Color vs. Natural Color of Landsat/Sentinel imagery side-by-side).
+### Temporal controller sync
+- **Goal**: let each panel show a different time of the same temporal layer, driven by the QGIS temporal controller, for time-series comparison at a glance.
+- **Approach**: give each panel canvas its own temporal range derived from the project's `QgsTemporalController`, offset per panel.
 
 ---
 
-### 3. Long-Term Enhancements (v1.0 & Beyond)
+## Ideas without measured demand yet
 
-#### A. Automated Web Hosting Deployment
-- **Goal**: Allow users to deploy their interactive map dashboards straight to the web in one click.
-- **Implementation**: Integrate GitHub Pages API or secure FTP/Cloud Storage pipelines. Users enter their repo details, and the plugin compiles, uploads, and generates a public URL (e.g., `https://username.github.io/my-comparison-map/`).
+### 3D view sync
+- **Goal**: move QGIS 3D map views with the 2D panels.
+- **Approach**: synchronise the camera target, pitch and yaw of open `Qgs3DMapCanvas` views with the active panel. Large; waiting for demand.
 
-#### B. Real-Time Spatial Analytics Side-by-Side
-- **Goal**: Embed lightweight geospatial analysis engines (e.g., calculating spatial buffers, hotspots, or LISA clusters) directly on the active coordinates inside each panel, updating instantly as the user pans.
+### Raster band and stretch sync
+- **Goal**: link contrast stretch, band combination and min/max between panels (for example false colour against natural colour imagery).
+
+### Dashboard hosting
+- **Goal**: publish an HTML dashboard to the web in one step. The exported file already works offline and can be hosted anywhere as a static page.
 
 ---
 
-## 💡 Contribution Guidelines
+## Contribution guidelines
 
 When implementing features from this roadmap:
-1. Ensure full backwards compatibility with **QGIS 3.40 LTR** and future **QGIS 4.x** versions.
-2. Maintain the slate-teal `#2a8f85` visual theme system.
-3. Ensure any new GUI elements are fully covered in the E2E verification test script (`scratch/zero2multimap_import_check.py`).
+1. Keep compatibility with **QGIS 3.40 LTR** and **QGIS 4.x** (`qgis.PyQt`, scoped enums, no bare `Qt.*`).
+2. Keep the plugin free of dependencies outside QGIS.
+3. Add value-level tests to `tests/`: pure tests as `tests/test_*.py` (pytest) and QGIS tests as `tests/test_*_qgis.py`, run on both QGIS runtimes.
