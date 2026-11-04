@@ -88,9 +88,9 @@ else:
 
 # Qgis.GeometryType exists from QGIS 3.30; the QgsWkbTypes names are the fallback.
 _GEOMETRY_TYPE = getattr(Qgis, "GeometryType", None)
-POLYGON = _GEOMETRY_TYPE.Polygon if _GEOMETRY_TYPE is not None else QgsWkbTypes.PolygonGeometry
-LINE = _GEOMETRY_TYPE.Line if _GEOMETRY_TYPE is not None else QgsWkbTypes.LineGeometry
-POINT = _GEOMETRY_TYPE.Point if _GEOMETRY_TYPE is not None else QgsWkbTypes.PointGeometry
+POLYGON = _GEOMETRY_TYPE.Polygon if _GEOMETRY_TYPE is not None else QgsWkbTypes.GeometryType.PolygonGeometry
+LINE = _GEOMETRY_TYPE.Line if _GEOMETRY_TYPE is not None else QgsWkbTypes.GeometryType.LineGeometry
+POINT = _GEOMETRY_TYPE.Point if _GEOMETRY_TYPE is not None else QgsWkbTypes.GeometryType.PointGeometry
 
 GRID_LAYOUTS = {
     "2 Panels (1x2)": (1, 2),
@@ -446,7 +446,7 @@ class MapPanelWidget(QFrame):
 
         # Custom mouse tracking marker
         self.marker = QgsVertexMarker(self.canvas)
-        self.marker.setIconType(QgsVertexMarker.ICON_CROSS)
+        self.marker.setIconType(QgsVertexMarker.IconType.ICON_CROSS)
         self.marker.setColor(QColor(46, 204, 113))
         self.marker.setPenWidth(2)
         self.marker.setIconSize(24)
@@ -2749,7 +2749,7 @@ class MultiMapDialog(QDialog):
         if self.sync_main_chk.isChecked():
             if not self.main_canvas_marker:
                 self.main_canvas_marker = QgsVertexMarker(main_canvas)
-                self.main_canvas_marker.setIconType(QgsVertexMarker.ICON_CROSS)
+                self.main_canvas_marker.setIconType(QgsVertexMarker.IconType.ICON_CROSS)
                 self.main_canvas_marker.setColor(QColor(231, 76, 60))
                 self.main_canvas_marker.setPenWidth(2)
                 self.main_canvas_marker.setIconSize(24)

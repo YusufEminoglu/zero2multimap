@@ -407,7 +407,7 @@ def test_eight_panel_print_layout_and_cartographic_elements():
         res = exporter.exportToImage(out_png, img_settings)
         check(
             "QgsLayoutExporter exports 8-panel layout to PNG cleanly",
-            res == QgsLayoutExporter.Success and os.path.isfile(out_png) and os.path.getsize(out_png) > 1024,
+            res == QgsLayoutExporter.ExportResult.Success and os.path.isfile(out_png) and os.path.getsize(out_png) > 1024,
             f"res={res} exists={os.path.isfile(out_png)}",
         )
 

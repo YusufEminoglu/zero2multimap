@@ -445,11 +445,9 @@ function fakeView(k) { return fakeGrid.querySelectorAll(".map-view")[k]; }
 
 
 def js_engine():
-    if PYQT_VERSION_STR.startswith("6"):
-        from PyQt6.QtQml import QJSEngine
-    else:
-        from PyQt5.QtQml import QJSEngine
-    return QJSEngine()
+    # qgis.PyQt has no QtQml shim, so import from the binding QGIS runs on.
+    binding = "PyQt6" if PYQT_VERSION_STR.startswith("6") else "PyQt5"
+    return importlib.import_module(binding + ".QtQml").QJSEngine()
 
 
 def png_size(data_uri):
